@@ -1,8 +1,12 @@
-package main
+package process_secrets
 
-import "testing"
+import (
+	"testing"
+)
 
-func mockFetchSecrets(keys []string) (map[string]string, error) {
+type mockSecretsStore struct{}
+
+func (_ mockSecretsStore) FetchSecrets(keys []string) (map[string]string, error) {
 	result := make(map[string]string)
 	mockSecrets := map[string]string{
 		"secret1": "secret1val",
@@ -16,6 +20,7 @@ func mockFetchSecrets(keys []string) (map[string]string, error) {
 }
 
 func TestModifyHeaders_SubstituteSecret(t *testing.T) {
+	mockSecretsStore := mockSecretsStore{}
 	var tests = []struct {
 		Headers  map[string]string
 		Expected map[string]string
@@ -46,7 +51,7 @@ func TestModifyHeaders_SubstituteSecret(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
-		actualResult, _ := ModifyHeaders(test.Headers, mockFetchSecrets)
+		actualResult, _ := GetChangedHeaders(test.Headers, mockSecretsStore)
 		for header, _ := range test.Headers {
 			actualHeaderVal, found := actualResult[header]
 			expectedHeaderVal := test.Expected[header]

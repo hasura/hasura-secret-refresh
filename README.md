@@ -13,3 +13,11 @@ After modifying the headers, the request will be forwarded to the hostname given
 in the header `X-Proxy-Forward-To` and the response will be returned unchanged.
 The `X-Proxy-Forward-To` header is only for use by this server and isn't
 forwarded to the destination server.
+
+## Config format
+
+```json
+{
+  "cache_ttl": 300 // cache ttl in seconds
+}
+```
