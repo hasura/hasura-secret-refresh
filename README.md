@@ -10,8 +10,8 @@ Secrets Manager. If the fetched value is secretval, then this header will be
 modified to Authorization: Bearer secretval
 
 After modifying the headers, the request will be forwarded to the hostname given
-in the header `X-Proxy-Forward-To` and the response will be returned unchanged.
-The `X-Proxy-Forward-To` header is only for use by this server and isn't
+in the header `X-Hasura-Forward-Host` and the response will be returned unchanged.
+The `X-Hasura-Forward-Host` header is only for use by this server and isn't
 forwarded to the destination server.
 
 ## Config format

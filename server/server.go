@@ -23,7 +23,7 @@ func Serve() {
 			headers[k] = req.In.Header.Get(k)
 		}
 		newHeaders, err := process_secrets.GetChangedHeaders(headers, secretsStore)
-		forwardToHeader := "X-Proxy-Forward-To"
+		forwardToHeader := "X-Hasura-Forward-Host"
 		forwardTo := req.In.Header.Get(forwardToHeader)
 		url, err := url.Parse(forwardTo)
 		if err != nil {
