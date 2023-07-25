@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"flag"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -18,11 +19,11 @@ func Serve() {
 	configPath := parseCliArgs()
 	config, err := parseConfig(*configPath)
 	if err != nil {
-		//TODO: Handle error
+		log.Fatalf("Unable to parse config: %s", err)
 	}
 	secretsStore, err := store.InitializeSecretStore(config)
 	if err != nil {
-		//TODO: Handle error
+		log.Fatalf("Unable to initialize secret store: %s", err)
 	}
 
 	http.Handle("/", &httputil.ReverseProxy{
@@ -50,8 +51,8 @@ func parseCliArgs() (configPath *string) {
 	return
 }
 
-func parseConfig(configPath string) (config map[string]string, err error) {
-	config = make(map[string]string)
+func parseConfig(configPath string) (config map[string]interface{}, err error) {
+	config = make(map[string]interface{})
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return

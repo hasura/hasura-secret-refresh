@@ -26,7 +26,7 @@ func createAwsSecretsManagerStore(config config) (store awsSecretsManager, err e
 		func(c *secretcache.Cache) { c.CacheConfig.CacheItemTTL = config.CacheTtl.Nanoseconds() },
 	)
 	if err != nil {
-		// TODO: handle error
+		return
 	}
 	return awsSecretsManager{cache: secretsCache}, nil
 }
