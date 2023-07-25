@@ -1,12 +1,27 @@
 package process_secrets
 
-import "regexp"
+import (
+	"regexp"
+)
+
+var regex = regexp.MustCompile("##(.*?)##")
 
 func GetChangedHeaders(
 	current map[string]string, secretsStore SecretsStore) (new map[string]string, err error,
 ) {
-	new = make(map[string]string)
-	regex := regexp.MustCompile("##(.*?)##")
+	secretsToFetch := getSecretsInHeaders(current)
+	secrets, err := secretsStore.FetchSecrets(secretsToFetch)
+	if err != nil {
+		return
+	}
+	new, err = replaceSecretTemplate(current, secrets)
+	if err != nil {
+		//TODO: Handle error
+	}
+	return
+}
+
+func getSecretsInHeaders(current map[string]string) []string {
 	secretsToFetch := make(map[string]bool)
 	for _, headerVal := range current {
 		matches := regex.FindAllStringSubmatch(headerVal, -1)
@@ -19,10 +34,12 @@ func GetChangedHeaders(
 	for k, _ := range secretsToFetch {
 		secretsToFetchList = append(secretsToFetchList, k)
 	}
-	secrets, err := secretsStore.FetchSecrets(secretsToFetchList)
-	if err != nil {
-		return
-	}
+	return secretsToFetchList
+}
+
+func replaceSecretTemplate(current map[string]string, secrets map[string]string,
+) (newHeaders map[string]string, err error) {
+	newHeaders = make(map[string]string)
 	for header, headerVal := range current {
 		newHeaderVal := regex.ReplaceAllStringFunc(headerVal, func(s string) string {
 			matches := regex.FindStringSubmatch(s)
@@ -33,7 +50,7 @@ func GetChangedHeaders(
 			}
 			return secret
 		})
-		new[header] = newHeaderVal
+		newHeaders[header] = newHeaderVal
 	}
 	return
 }

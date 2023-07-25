@@ -18,6 +18,6 @@ forwarded to the destination server.
 
 ```json
 {
-  "cache_ttl": 300 // cache ttl in seconds
+  "cache_ttl": 300
 }
 ```
