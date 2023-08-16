@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hasura-secret-refresh-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hasura-secret-refresh
+  template:
+    metadata:
+      labels:
+        app: hasura-secret-refresh
+    spec:
+      containers:
+        - name: hasura-secret-refresh
+          image: varundey/test-repo:latest
+          ports:
+            - containerPort: 8080
