@@ -12,8 +12,9 @@ spec:
       labels:
         app: hasura-secret-refresh
     spec:
+      serviceAccountName: jpmc-secret-management-service-account-2
       containers:
         - name: hasura-secret-refresh
-          image: varundey/test-repo:latest
+          image: varundey/test-repo:amd64
           ports:
             - containerPort: 8080
