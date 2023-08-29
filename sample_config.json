@@ -1,0 +1,8 @@
+{
+    "providers": [
+        {
+            "type": "aws_secrets_manager",
+            "cache_ttl": 300
+        }
+    ]
+}
