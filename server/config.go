@@ -38,7 +38,7 @@ func ParseConfig(rawConfig []byte) (config Config, err error) {
 	}
 	for k, v := range parsedConfig {
 		var provider_ provider.Provider
-		if k == "aws_secret_manager" {
+		if k == "aws_secrets_manager" {
 			provider_, err = getAwsSecretsManagerProvider(v)
 			if err != nil {
 				return

@@ -1,9 +1,11 @@
 package provider
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
+	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
@@ -34,7 +36,26 @@ func (provider IdAnywhere) GetSecret(requestConfig RequestConfig) (secret string
 	if err != nil {
 		return
 	}
-	fmt.Println(tokenString)
+	data := url.Values{}
+	data.Set("grant_type", "client_credentials")
+	data.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	data.Set("client_id", provider.oAuthClientId)
+	data.Set("client_assertion", tokenString)
+	data.Set("resource", requestConfig.SecretId)
+	r, _ := http.NewRequest(http.MethodPost, provider.oAuthUrl.String(), strings.NewReader(data.Encode()))
+	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Add("Accept", "application/x-www-form-url-encoded")
+	resp, err := http.DefaultClient.Do(r)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	respJson := make(map[string]interface{})
+	err = json.NewDecoder(resp.Body).Decode(&respJson)
+	if err != nil {
+		return
+	}
+	secret, _ = respJson["access_token"].(string)
 	return
 }
 
