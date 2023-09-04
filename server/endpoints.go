@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -25,24 +26,29 @@ func Serve(config Config) {
 			}
 			requestConfig, err := provider.GetRequestConfig(inHeaders)
 			if err != nil {
-				//TODO: Handle error
+				//TODO: return error code
+				log.Printf("Unable to get required configuration from request: %s", err)
 			}
 			url, err := url.Parse(requestConfig.DestinationUrl)
 			if err != nil {
-				// TODO: handle error
+				//TODO: return error code
+				log.Printf("Unable to parse url %s: %s", requestConfig.DestinationUrl, err)
 			}
 			req.SetURL(url)
 			provider, ok := config.Providers[requestConfig.SecretProvider]
 			if !ok {
-				//TODO: handle error
+				//TODO: return error code
+				log.Printf("Provider with name %s does not exist", requestConfig.SecretProvider)
 			}
 			secret, err := provider.GetSecret(requestConfig)
 			if err != nil {
-				//TODO: handle error
+				//TODO: return error code
+				log.Printf("Unable to get secret: %s", err)
 			}
 			headerKey, headerVal, err := template.GetHeaderFromTemplate(requestConfig.HeaderTemplate, secret)
 			if err != nil {
-				//TODO: handle error
+				//TODO: return error code
+				log.Printf("Unable to process header template: %s", err)
 			}
 			req.Out.Header.Set(headerKey, headerVal)
 		},
