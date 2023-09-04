@@ -1,4 +1,4 @@
-package aws_secrets_manager
+package provider
 
 import (
 	"testing"

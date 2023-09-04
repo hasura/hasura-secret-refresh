@@ -1,56 +1,51 @@
 package server
 
 import (
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/hasura/hasura-secret-refresh/store"
-	"github.com/hasura/hasura-secret-refresh/store/aws_secrets_manager"
-	secretsTemplate "github.com/hasura/hasura-secret-refresh/template"
+	"github.com/hasura/hasura-secret-refresh/provider"
+	template "github.com/hasura/hasura-secret-refresh/template"
 )
 
-const forwardToHeader string = "X-Hasura-Forward-Host"
-
 func Serve(config Config) {
-	awsSecretsManagerConfig := config.Providers[0].(AwsSecretStoreConfig)
-	secretsStore, err := aws_secrets_manager.CreateAwsSecretsManagerStore(awsSecretsManagerConfig.CacheTtl)
-	if err != nil {
-		log.Fatalf("Unable to initialize secret store: %s", err)
-	}
-
 	http.Handle("/", &httputil.ReverseProxy{
 		Rewrite: func(req *httputil.ProxyRequest) {
-			forwardTo := req.In.Header.Get(forwardToHeader)
-			url, err := url.Parse(forwardTo)
+			inHeaders := make(map[string]string)
+			headersToDelete := make([]string, 0, 4)
+			for k, _ := range req.In.Header {
+				inHeaders[k] = req.In.Header.Get(k)
+				if provider.IsRequestConfig(k) {
+					headersToDelete = append(headersToDelete, k)
+				}
+			}
+			for _, v := range headersToDelete {
+				req.Out.Header.Del(v)
+			}
+			requestConfig, err := provider.GetRequestConfig(inHeaders)
+			if err != nil {
+				//TODO: Handle error
+			}
+			url, err := url.Parse(requestConfig.DestinationUrl)
 			if err != nil {
 				// TODO: handle error
 			}
 			req.SetURL(url)
-			err = modifyHeaders(req.Out, secretsStore)
-			if err != nil {
-				// TODO: handle error
+			provider, ok := config.Providers[requestConfig.SecretProvider]
+			if !ok {
+				//TODO: handle error
 			}
+			secret, err := provider.GetSecret(requestConfig)
+			if err != nil {
+				//TODO: handle error
+			}
+			headerKey, headerVal, err := template.GetHeaderFromTemplate(requestConfig.HeaderTemplate, secret)
+			if err != nil {
+				//TODO: handle error
+			}
+			req.Out.Header.Set(headerKey, headerVal)
 		},
 	})
 	http.ListenAndServe(":5353", nil)
-}
-
-func modifyHeaders(req *http.Request, secretsStore store.SecretsStore) (err error) {
-	templates := make(map[secretsTemplate.TemplateKey]secretsTemplate.Template)
-	for k, _ := range req.Header {
-		templates[secretsTemplate.TemplateKey(k)] = secretsTemplate.Template(req.Header.Get(k))
-	}
-	requiredKeys := secretsTemplate.GetUniqueKeysFromTemplates(templates)
-	result, err := secretsStore.FetchSecrets(requiredKeys)
-	if err != nil {
-		//TODO: Handle error
-	}
-	newHeaders := secretsTemplate.ApplyTemplates(templates, result)
-	for k, v := range newHeaders {
-		req.Header.Set(string(k), v)
-	}
-	req.Header.Del(forwardToHeader)
-	return
 }
