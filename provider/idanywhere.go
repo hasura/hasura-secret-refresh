@@ -1,16 +1,19 @@
 package provider
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"time"
 
+	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
+	jwt "github.com/golang-jwt/jwt/v4"
 	cache "github.com/patrickmn/go-cache"
 )
 
 type IdAnywhere struct {
 	cache               *cache.Cache
-	awsSm               *AwsSecretsManager
+	awsSecretsManager   *secretcache.Cache
 	certificateSecretId string
 	oAuthUrl            url.URL
 	oAuthClientId       string
@@ -18,6 +21,20 @@ type IdAnywhere struct {
 }
 
 func (provider IdAnywhere) GetSecret(requestConfig RequestConfig) (secret string, err error) {
+	rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
+	if err != nil {
+		return
+	}
+	rsaPrivateKeyPem, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPrivateKeyPemRaw))
+	if err != nil {
+		return
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(provider.jwtClaimMap))
+	tokenString, err := token.SignedString(rsaPrivateKeyPem)
+	if err != nil {
+		return
+	}
+	fmt.Println(tokenString)
 	return
 }
 
@@ -34,7 +51,14 @@ func CreateIdAnywhereProvider(
 		oAuthUrl.String(),
 		oAuthClientId,
 	)
-	secresManagerProvider, err := CreateAwsSecretsManagerProvider(secretsManagerCacheTtl)
+	if err != nil {
+		return
+	}
+	awsSecretsManagerCache, err := secretcache.New(
+		func(c *secretcache.Cache) {
+			c.CacheConfig.CacheItemTTL = GetCacheTtlFromDuration(secretsManagerCacheTtl)
+		},
+	)
 	if err != nil {
 		return
 	}
@@ -42,7 +66,7 @@ func CreateIdAnywhereProvider(
 	cachePurgeFrequency := time.Hour
 	cache := cache.New(cacheDefaultExpiration, cachePurgeFrequency)
 	return IdAnywhere{
-		awsSm:               &secresManagerProvider,
+		awsSecretsManager:   awsSecretsManagerCache,
 		cache:               cache,
 		certificateSecretId: certificateSecretId,
 		oAuthUrl:            oAuthUrl,

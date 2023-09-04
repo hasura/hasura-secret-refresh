@@ -49,6 +49,9 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/aws/aws-secretsmanager-caching-go v1.1.2
 ## explicit; go 1.12
 github.com/aws/aws-secretsmanager-caching-go/secretcache
+# github.com/golang-jwt/jwt/v4 v4.5.0
+## explicit; go 1.16
+github.com/golang-jwt/jwt/v4
 # github.com/jmespath/go-jmespath v0.4.0
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
