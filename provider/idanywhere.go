@@ -14,7 +14,7 @@ type IdAnywhere struct {
 	certificateSecretId string
 	oAuthUrl            url.URL
 	oAuthClientId       string
-	jwtClaimMap         map[string]string
+	jwtClaimMap         map[string]interface{}
 }
 
 func (provider IdAnywhere) GetSecret(requestConfig RequestConfig) (secret string, err error) {
@@ -26,7 +26,7 @@ func CreateIdAnywhereProvider(
 	certificateSecretId string,
 	oAuthUrl url.URL,
 	oAuthClientId string,
-	jwtClaimMap map[string]string,
+	jwtClaimMap map[string]interface{},
 ) (provider IdAnywhere, err error) {
 	log.Printf("Creating IdAnywhere provider with AWS Secrets Manager cache TTL as %s, certificate secret id as %s, OAuth Url as %s, OAuth client id as %s",
 		secretsManagerCacheTtl.String(),

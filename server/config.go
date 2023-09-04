@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"time"
 
@@ -65,11 +64,9 @@ func getIdAnywhereProvider(config ProviderConfig) (provider_ provider.IdAnywhere
 	if err != nil {
 		return
 	}
-	claims := make(map[string]string)
+	claims := make(map[string]interface{})
 	err = json.Unmarshal([]byte(config.JwtClaimMap), &claims)
 	if err != nil {
-		fmt.Printf("%v", config.JwtClaimMap == "")
-		fmt.Printf(">>>>> %+v", config.JwtClaimMap)
 		return
 	}
 	provider_, err = provider.CreateIdAnywhereProvider(
