@@ -20,6 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Unable to read config file: %s", err))
 	}
+	log.Printf("Config file found")
 	config, err := server.ParseConfig(data)
 	if err != nil {
 		log.Fatalf("Unable to parse config file: %s", err)

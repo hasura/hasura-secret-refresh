@@ -3,6 +3,7 @@ module github.com/hasura/hasura-secret-refresh
 go 1.20
 
 require (
+	github.com/BurntSushi/toml v1.3.2
 	github.com/aws/aws-secretsmanager-caching-go v1.1.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 )

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"log"
 	"net/url"
 	"time"
 
@@ -27,6 +28,12 @@ func CreateIdAnywhereProvider(
 	oAuthClientId string,
 	jwtClaimMap map[string]string,
 ) (provider IdAnywhere, err error) {
+	log.Printf("Creating IdAnywhere provider with AWS Secrets Manager cache TTL as %s, certificate secret id as %s, OAuth Url as %s, OAuth client id as %s",
+		secretsManagerCacheTtl.String(),
+		certificateSecretId,
+		oAuthUrl.String(),
+		oAuthClientId,
+	)
 	secresManagerProvider, err := CreateAwsSecretsManagerProvider(secretsManagerCacheTtl)
 	if err != nil {
 		return
