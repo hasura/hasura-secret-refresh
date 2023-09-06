@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -38,8 +37,7 @@ const (
 	aws_sm_oauth        = "awssm_oauth"
 )
 
-func ParseConfig(rawConfig []byte) (config Config, err error) {
-	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+func ParseConfig(rawConfig []byte, logger zerolog.Logger) (config Config, err error) {
 	parsedConfig := make(map[string]ProviderConfig)
 	config.Providers = make(map[string]provider.Provider)
 	_, err = toml.Decode(string(rawConfig), &parsedConfig)

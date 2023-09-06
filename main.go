@@ -12,17 +12,17 @@ func main() {
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	configPath := flag.String(server.ConfigFileCliFlag, server.ConfigFileDefaultPath, server.ConfigFileCliFlagDescription)
 	flag.Parse()
-	logger = logger.With().
+	initLogger := logger.With().
 		Str("config_file_path", *configPath).
 		Bool("is_default_path", server.IsDefaultPath(configPath)).
 		Logger()
 	data, err := os.ReadFile(*configPath)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Unable to read config file")
+		initLogger.Fatal().Err(err).Msg("Unable to read config file")
 	}
-	config, err := server.ParseConfig(data)
+	config, err := server.ParseConfig(data, logger)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Unable to parse config file")
+		initLogger.Fatal().Err(err).Msg("Unable to parse config file")
 	}
-	server.Serve(config)
+	server.Serve(config, logger)
 }
