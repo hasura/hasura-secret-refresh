@@ -2,6 +2,8 @@ package provider
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -24,19 +26,40 @@ type AwsSmOAuth struct {
 }
 
 func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string, err error) {
+	cachedToken, ok := provider.cache.Get(requestConfig.SecretId)
+	if ok {
+		return cachedToken, nil
+	}
 	rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
 	if err != nil {
 		return
 	}
-	rsaPrivateKeyPem, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPrivateKeyPemRaw))
+	tokenString, err := provider.createJwtToken(rsaPrivateKeyPemRaw)
 	if err != nil {
 		return
+	}
+	accessToken, err := provider.getTokenFromOAuthCall(requestConfig, tokenString)
+	if err != nil {
+		return
+	}
+	_ = provider.cache.Add(requestConfig.SecretId, accessToken)
+	return accessToken, nil
+}
+
+func (provider AwsSmOAuth) createJwtToken(rsaPrivateKeyPemRaw string) (string, error) {
+	rsaPrivateKeyPem, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPrivateKeyPemRaw))
+	if err != nil {
+		return "", err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(provider.jwtClaimMap))
 	tokenString, err := token.SignedString(rsaPrivateKeyPem)
 	if err != nil {
-		return
+		return tokenString, err
 	}
+	return tokenString, nil
+}
+
+func (provider AwsSmOAuth) getTokenFromOAuthCall(requestConfig RequestConfig, tokenString string) (token string, err error) {
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
 	data.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
@@ -56,7 +79,10 @@ func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string
 	if err != nil {
 		return
 	}
-	secret, _ = respJson["access_token"].(string)
+	token, ok := respJson["access_token"].(string)
+	if !ok {
+		return token, errors.New(fmt.Sprintf("Error converting token to string"))
+	}
 	return
 }
 
