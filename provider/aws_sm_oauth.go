@@ -23,22 +23,34 @@ type AwsSmOAuth struct {
 	oAuthClientId       string
 	jwtClaimMap         map[string]interface{}
 	jwtDuration         time.Duration
+	logger              zerolog.Logger
 }
 
 func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string, err error) {
+	debugLogger := provider.logger
+	defer func() {
+		if err != nil {
+			debugLogger.Debug().Err(err).Msg("error completing provider flow")
+		} else {
+			debugLogger.Debug().Msg("Completed aws+oauth flow")
+		}
+	}()
 	cachedToken, ok := provider.cache.Get(requestConfig.SecretId)
 	if ok {
 		return cachedToken, nil
 	}
 	rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
+	debugLogger = debugLogger.With().Str("aws_secret_val", rsaPrivateKeyPemRaw).Logger()
 	if err != nil {
 		return
 	}
 	tokenString, err := provider.createJwtToken(rsaPrivateKeyPemRaw)
+	debugLogger = debugLogger.With().Str("created_jwt_token", tokenString).Logger()
 	if err != nil {
 		return
 	}
-	accessToken, err := provider.getTokenFromOAuthCall(requestConfig, tokenString)
+	accessToken, err := provider.getTokenFromOAuthCall(requestConfig, tokenString, provider.logger)
+	debugLogger = debugLogger.With().Str("token_from_oauth", accessToken).Logger()
 	if err != nil {
 		return
 	}
@@ -66,7 +78,18 @@ func (provider AwsSmOAuth) createJwtToken(rsaPrivateKeyPemRaw string) (string, e
 	return tokenString, nil
 }
 
-func (provider AwsSmOAuth) getTokenFromOAuthCall(requestConfig RequestConfig, tokenString string) (token string, err error) {
+func (provider AwsSmOAuth) getTokenFromOAuthCall(
+	requestConfig RequestConfig,
+	tokenString string,
+	logger zerolog.Logger,
+) (token string, err error) {
+	defer func() {
+		if err != nil {
+			logger.Debug().Err(err).Msg("Error completing OAuth flow")
+		} else {
+			logger.Debug().Msg("OAuth flow completed")
+		}
+	}()
 	data := url.Values{}
 	data.Set("grant_type", "client_credentials")
 	data.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
@@ -76,6 +99,16 @@ func (provider AwsSmOAuth) getTokenFromOAuthCall(requestConfig RequestConfig, to
 	r, _ := http.NewRequest(http.MethodPost, provider.oAuthUrl.String(), strings.NewReader(data.Encode()))
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Accept", "application/x-www-form-url-encoded")
+	formDataDict := zerolog.Dict()
+	for k, _ := range data {
+		formDataDict = formDataDict.Str(k, data.Get(k))
+	}
+	logger = logger.With().Dict("form_data", formDataDict).Logger()
+	headerDict := zerolog.Dict()
+	for k, _ := range r.Header {
+		headerDict = headerDict.Str(k, r.Header.Get(k))
+	}
+	logger = logger.With().Dict("headers", headerDict).Logger()
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		return
@@ -130,5 +163,6 @@ func CreateAwsSmOAuthProvider(
 		oAuthClientId:       oAuthClientId,
 		jwtClaimMap:         jwtClaimMap,
 		jwtDuration:         jwtDuration,
+		logger:              logger,
 	}, nil
 }
