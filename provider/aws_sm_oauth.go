@@ -22,7 +22,7 @@ type AwsSmOAuth struct {
 	oAuthUrl            url.URL
 	oAuthClientId       string
 	jwtClaimMap         map[string]interface{}
-	jwtExpiration       time.Duration
+	jwtDuration         time.Duration
 }
 
 func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string, err error) {
@@ -51,7 +51,14 @@ func (provider AwsSmOAuth) createJwtToken(rsaPrivateKeyPemRaw string) (string, e
 	if err != nil {
 		return "", err
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(provider.jwtClaimMap))
+	jwtDuration := provider.jwtDuration
+	currentJwtClaim := make(map[string]interface{})
+	jwtExp := time.Now().Add(jwtDuration).Unix()
+	for k, v := range provider.jwtClaimMap {
+		currentJwtClaim[k] = v
+	}
+	currentJwtClaim["exp"] = jwtExp
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(currentJwtClaim))
 	tokenString, err := token.SignedString(rsaPrivateKeyPem)
 	if err != nil {
 		return tokenString, err
@@ -94,7 +101,7 @@ func CreateAwsSmOAuthProvider(
 	jwtClaimMap map[string]interface{},
 	tokenCacheTtl time.Duration,
 	tokenCacheSize int,
-	jwtExpiration time.Duration,
+	jwtDuration time.Duration,
 	logger zerolog.Logger,
 ) (provider AwsSmOAuth, err error) {
 	logger.Info().
@@ -104,7 +111,7 @@ func CreateAwsSmOAuthProvider(
 		Str("oauth_client_id", oAuthClientId).
 		Str("token_cache_ttl", tokenCacheTtl.String()).
 		Int("token_cache_size", tokenCacheSize).
-		Str("jwt_expiration", jwtExpiration.String()).
+		Str("jwt_duration", jwtDuration.String()).
 		Msg("Creating provider")
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
@@ -122,6 +129,6 @@ func CreateAwsSmOAuthProvider(
 		oAuthUrl:            oAuthUrl,
 		oAuthClientId:       oAuthClientId,
 		jwtClaimMap:         jwtClaimMap,
-		jwtExpiration:       jwtExpiration,
+		jwtDuration:         jwtDuration,
 	}, nil
 }

@@ -29,7 +29,7 @@ type ProviderConfig struct {
 	OauthUrl            string `toml:"oauth_url"`
 	OauthClientId       string `toml:"oauth_client_id"`
 	JwtClaimMap         string `toml:"jwt_claims_map"`
-	JwtExpiration       int64  `toml:"jwt_expiration"`
+	JwtDuration         int64  `toml:"jwt_duration"`
 }
 
 const (
@@ -92,7 +92,7 @@ func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provid
 		claims,
 		time.Duration(config.TokenCacheTtl)*time.Second,
 		config.TokenCacheSize,
-		time.Duration(config.JwtExpiration)*time.Second,
+		time.Duration(config.JwtDuration)*time.Second,
 		logger,
 	)
 	return
