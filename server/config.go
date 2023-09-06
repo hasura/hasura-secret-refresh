@@ -3,10 +3,12 @@ package server
 import (
 	"encoding/json"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/hasura/hasura-secret-refresh/provider"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -31,7 +33,13 @@ type ProviderConfig struct {
 	JwtExpiration       int64  `toml:"jwt_expiration"`
 }
 
+const (
+	aws_secrets_manager = "aws_secrets_manager"
+	aws_sm_oauth        = "awssm_oauth"
+)
+
 func ParseConfig(rawConfig []byte) (config Config, err error) {
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	parsedConfig := make(map[string]ProviderConfig)
 	config.Providers = make(map[string]provider.Provider)
 	_, err = toml.Decode(string(rawConfig), &parsedConfig)
@@ -40,14 +48,18 @@ func ParseConfig(rawConfig []byte) (config Config, err error) {
 	}
 	for k, v := range parsedConfig {
 		var provider_ provider.Provider
-		if k == "aws_secrets_manager" {
-			provider_, err = getAwsSecretsManagerProvider(v)
+		if k == aws_secrets_manager {
+			sublogger := logger.With().Str("provider_name", aws_secrets_manager).Logger()
+			provider_, err = getAwsSecretsManagerProvider(v, sublogger)
 			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
-		} else if k == "awssm_oauth" {
-			provider_, err = getAwsSmOAuthProvider(v)
+		} else if k == aws_sm_oauth {
+			sublogger := logger.With().Str("provider_name", aws_sm_oauth).Logger()
+			provider_, err = getAwsSmOAuthProvider(v, sublogger)
 			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
 		}
@@ -56,12 +68,15 @@ func ParseConfig(rawConfig []byte) (config Config, err error) {
 	return
 }
 
-func getAwsSecretsManagerProvider(config ProviderConfig) (provider_ provider.AwsSecretsManager, err error) {
-	provider_, err = provider.CreateAwsSecretsManagerProvider(time.Duration(config.TokenCacheTtl) * time.Second)
+func getAwsSecretsManagerProvider(config ProviderConfig, logger zerolog.Logger) (provider_ provider.AwsSecretsManager, err error) {
+	provider_, err = provider.CreateAwsSecretsManagerProvider(
+		time.Duration(config.TokenCacheTtl)*time.Second,
+		logger,
+	)
 	return
 }
 
-func getAwsSmOAuthProvider(config ProviderConfig) (provider_ provider.AwsSmOAuth, err error) {
+func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provider_ provider.AwsSmOAuth, err error) {
 	oAuthParsedUrl, err := url.Parse(config.OauthUrl)
 	if err != nil {
 		return
@@ -80,6 +95,7 @@ func getAwsSmOAuthProvider(config ProviderConfig) (provider_ provider.AwsSmOAuth
 		time.Duration(config.TokenCacheTtl)*time.Second,
 		config.TokenCacheSize,
 		time.Duration(config.JwtExpiration)*time.Second,
+		logger,
 	)
 	return
 }

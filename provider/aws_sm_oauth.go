@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/rs/zerolog"
 )
 
 type AwsSmOAuth struct {
@@ -95,16 +95,17 @@ func CreateAwsSmOAuthProvider(
 	tokenCacheTtl time.Duration,
 	tokenCacheSize int,
 	jwtExpiration time.Duration,
+	logger zerolog.Logger,
 ) (provider AwsSmOAuth, err error) {
-	log.Printf("Creating Aws Secrets Manager + OAuth provider with AWS Secrets Manager cache TTL as %s, certificate secret id as %s, OAuth Url as %s, OAuth client id as %s",
-		certificateCacheTtl.String(),
-		certificateSecretId,
-		oAuthUrl.String(),
-		oAuthClientId,
-	)
-	if err != nil {
-		return
-	}
+	logger.Info().
+		Str("certificate_cache_ttl", certificateCacheTtl.String()).
+		Str("certificate_secret_id", certificateSecretId).
+		Str("oauth_url", oAuthUrl.String()).
+		Str("oauth_client_id", oAuthClientId).
+		Str("token_cache_ttl", tokenCacheTtl.String()).
+		Int("token_cache_size", tokenCacheSize).
+		Str("jwt_expiration", jwtExpiration.String()).
+		Msg("Creating provider")
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
 			c.CacheConfig.CacheItemTTL = GetCacheTtlFromDuration(certificateCacheTtl)

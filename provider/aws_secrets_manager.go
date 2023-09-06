@@ -1,10 +1,10 @@
 package provider
 
 import (
-	"log"
 	"time"
 
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
+	"github.com/rs/zerolog"
 )
 
 type AwsSecretsManager struct {
@@ -16,8 +16,10 @@ func (provider AwsSecretsManager) GetSecret(requestConfig RequestConfig) (secret
 	return
 }
 
-func CreateAwsSecretsManagerProvider(cacheTtl time.Duration) (provider AwsSecretsManager, err error) {
-	log.Printf("Creating AWS Secrets Manager provider with cache TTL %s", cacheTtl.String())
+func CreateAwsSecretsManagerProvider(cacheTtl time.Duration, logger zerolog.Logger) (provider AwsSecretsManager, err error) {
+	logger.Info().
+		Str("cache_ttl", cacheTtl.String()).
+		Msg("Creating provider")
 	secretsCache, err := secretcache.New(
 		func(c *secretcache.Cache) { c.CacheConfig.CacheItemTTL = GetCacheTtlFromDuration(cacheTtl) },
 	)
