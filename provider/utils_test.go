@@ -6,10 +6,10 @@ import (
 
 func TestTemplate_GetRequestConfig(t *testing.T) {
 	mockHeaders := map[string]string{
-		"X-Proxy-Url":             "http://someurl.com",
-		"X-Proxy-Secret-Id":       "some_secret_id",
-		"X-Proxy-Secret-Provider": "some_provider_name",
-		"X-Proxy-Header-Template": "Bearer ##secret##",
+		"X-Hasura-Forward-To":      "http://someurl.com",
+		"X-Hasura-Secret-Id":       "some_secret_id",
+		"X-Hasura-Secret-Provider": "some_provider_name",
+		"X-Hasura-Secret-Header":   "Bearer ##secret##",
 	}
 	response, err := GetRequestConfig(mockHeaders)
 	if err != nil {
@@ -25,9 +25,9 @@ func TestTemplate_GetRequestConfig(t *testing.T) {
 
 func TestTemplate_GetRequestConfigError(t *testing.T) {
 	mockHeaders := map[string]string{
-		"X-Proxy-Secret-Id":       "some_secret_id",
-		"X-Proxy-Secret-Provider": "some_provider_name",
-		"X-Proxy-Header-Template": "Bearer ##secret##",
+		"X-Hasura-Secret-Id":       "some_secret_id",
+		"X-Hasura-Secret-Provider": "some_provider_name",
+		"X-Hasura-Secret-Header":   "Bearer ##secret##",
 	}
 	_, err := GetRequestConfig(mockHeaders)
 	if err == nil {
@@ -37,10 +37,10 @@ func TestTemplate_GetRequestConfigError(t *testing.T) {
 
 func TestTemplate_IsRequestConfig(t *testing.T) {
 	requestConfigHeaders := []string{
-		"X-Proxy-Url",
-		"X-Proxy-Secret-Id",
-		"X-Proxy-Secret-Provider",
-		"X-Proxy-Header-Template",
+		"X-Hasura-Forward-To",
+		"X-Hasura-Secret-Id",
+		"X-Hasura-Secret-Provider",
+		"X-Hasura-Secret-Header",
 	}
 	anyOtherHeaders := []string{
 		"Authorization",

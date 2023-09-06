@@ -1,6 +1,9 @@
 package provider
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type RequestConfig struct {
 	DestinationUrl string
@@ -9,39 +12,48 @@ type RequestConfig struct {
 	HeaderTemplate string
 }
 
+type RequestConfigItem struct {
+	UpdateRequestConfig func(*RequestConfig, string)
+}
+
+// map from header name to request config item
+var requestConfigs = map[string]RequestConfigItem{
+	"X-Hasura-Forward-To": {
+		UpdateRequestConfig: func(config *RequestConfig, val string) {
+			config.DestinationUrl = val
+		},
+	},
+	"X-Hasura-Secret-Id": {
+		UpdateRequestConfig: func(config *RequestConfig, val string) {
+			config.SecretId = val
+		},
+	},
+	"X-Hasura-Secret-Provider": {
+		UpdateRequestConfig: func(config *RequestConfig, val string) {
+			config.SecretProvider = val
+		},
+	},
+	"X-Hasura-Secret-Header": {
+		UpdateRequestConfig: func(config *RequestConfig, val string) {
+			config.HeaderTemplate = val
+		},
+	},
+}
+
 func GetRequestConfig(headers map[string]string) (
 	requestConfig RequestConfig, err error,
 ) {
-	val, ok := headers["X-Proxy-Url"]
-	if !ok {
-		return requestConfig, errors.New("Header X-Proxy-Url not found in request")
+	for k, v := range requestConfigs {
+		val, ok := headers[k]
+		if !ok {
+			return requestConfig, errors.New(fmt.Sprintf("Header %s not found in request", k))
+		}
+		v.UpdateRequestConfig(&requestConfig, val)
 	}
-	requestConfig.DestinationUrl = val
-	val, ok = headers["X-Proxy-Secret-Id"]
-	if !ok {
-		return requestConfig, errors.New("Header X-Proxy-Secret-Id not found in request")
-	}
-	requestConfig.SecretId = val
-	val, ok = headers["X-Proxy-Secret-Provider"]
-	if !ok {
-		return requestConfig, errors.New("Header X-Proxy-Secret-Provider not found in request")
-	}
-	requestConfig.SecretProvider = val
-	val, ok = headers["X-Proxy-Header-Template"]
-	if !ok {
-		return requestConfig, errors.New("Header X-Proxy-Header-Template not found in request")
-	}
-	requestConfig.HeaderTemplate = val
 	return
 }
 
 func IsRequestConfig(headerName string) bool {
-	requestConfigsSet := map[string]bool{
-		"X-Proxy-Url":             true,
-		"X-Proxy-Secret-Id":       true,
-		"X-Proxy-Secret-Provider": true,
-		"X-Proxy-Header-Template": true,
-	}
-	_, ok := requestConfigsSet[headerName]
-	return ok
+	_, found := requestConfigs[headerName]
+	return found
 }
