@@ -21,13 +21,14 @@ type Config struct {
 
 // a union of all config fields required by each provider
 type ProviderConfig struct {
-	CacheTtl               int64  `toml:"cache_ttl"`
-	SecretsManagerCacheTtl int64  `toml:"certificate_cache_ttl"`
-	CertificateSecretId    string `toml:"certificate_secret_id"`
-	OauthUrl               string `toml:"oauth_url"`
-	OauthClientId          string `toml:"oauth_client_id"`
-	JwtClaimMap            string `toml:"jwt_claims_map"`
-	JwtExpiration          int64  `toml:"jwt_expiration"`
+	TokenCacheTtl       int64  `toml:"token_cache_ttl"`
+	TokenCacheSize      int    `toml:"token_cache_size"`
+	CertificateCacheTtl int64  `toml:"certificate_cache_ttl"`
+	CertificateSecretId string `toml:"certificate_secret_id"`
+	OauthUrl            string `toml:"oauth_url"`
+	OauthClientId       string `toml:"oauth_client_id"`
+	JwtClaimMap         string `toml:"jwt_claims_map"`
+	JwtExpiration       int64  `toml:"jwt_expiration"`
 }
 
 func ParseConfig(rawConfig []byte) (config Config, err error) {
@@ -56,7 +57,7 @@ func ParseConfig(rawConfig []byte) (config Config, err error) {
 }
 
 func getAwsSecretsManagerProvider(config ProviderConfig) (provider_ provider.AwsSecretsManager, err error) {
-	provider_, err = provider.CreateAwsSecretsManagerProvider(time.Duration(config.CacheTtl) * time.Second)
+	provider_, err = provider.CreateAwsSecretsManagerProvider(time.Duration(config.TokenCacheTtl) * time.Second)
 	return
 }
 
@@ -71,11 +72,14 @@ func getAwsSmOAuthProvider(config ProviderConfig) (provider_ provider.AwsSmOAuth
 		return
 	}
 	provider_, err = provider.CreateAwsSmOAuthProvider(
-		time.Duration(config.SecretsManagerCacheTtl)*time.Second,
+		time.Duration(config.CertificateCacheTtl)*time.Second,
 		config.CertificateSecretId,
 		*oAuthParsedUrl,
 		config.OauthClientId,
 		claims,
+		time.Duration(config.TokenCacheTtl)*time.Second,
+		config.TokenCacheSize,
+		time.Duration(config.JwtExpiration)*time.Second,
 	)
 	return
 }

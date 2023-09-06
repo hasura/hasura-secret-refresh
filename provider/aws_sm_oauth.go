@@ -10,16 +10,17 @@ import (
 
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
 	jwt "github.com/golang-jwt/jwt/v4"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 )
 
 type AwsSmOAuth struct {
-	cache               *cache.Cache
+	cache               *expirable.LRU[string, string]
 	awsSecretsManager   *secretcache.Cache
 	certificateSecretId string
 	oAuthUrl            url.URL
 	oAuthClientId       string
 	jwtClaimMap         map[string]interface{}
+	jwtExpiration       time.Duration
 }
 
 func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string, err error) {
@@ -60,14 +61,17 @@ func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string
 }
 
 func CreateAwsSmOAuthProvider(
-	secretsManagerCacheTtl time.Duration,
+	certificateCacheTtl time.Duration,
 	certificateSecretId string,
 	oAuthUrl url.URL,
 	oAuthClientId string,
 	jwtClaimMap map[string]interface{},
+	tokenCacheTtl time.Duration,
+	tokenCacheSize int,
+	jwtExpiration time.Duration,
 ) (provider AwsSmOAuth, err error) {
 	log.Printf("Creating Aws Secrets Manager + OAuth provider with AWS Secrets Manager cache TTL as %s, certificate secret id as %s, OAuth Url as %s, OAuth client id as %s",
-		secretsManagerCacheTtl.String(),
+		certificateCacheTtl.String(),
 		certificateSecretId,
 		oAuthUrl.String(),
 		oAuthClientId,
@@ -77,15 +81,13 @@ func CreateAwsSmOAuthProvider(
 	}
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
-			c.CacheConfig.CacheItemTTL = GetCacheTtlFromDuration(secretsManagerCacheTtl)
+			c.CacheConfig.CacheItemTTL = GetCacheTtlFromDuration(certificateCacheTtl)
 		},
 	)
 	if err != nil {
 		return
 	}
-	cacheDefaultExpiration := 5 * time.Minute
-	cachePurgeFrequency := time.Hour
-	cache := cache.New(cacheDefaultExpiration, cachePurgeFrequency)
+	cache := expirable.NewLRU[string, string](tokenCacheSize, nil, tokenCacheTtl)
 	return AwsSmOAuth{
 		awsSecretsManager:   awsSecretsManagerCache,
 		cache:               cache,
@@ -93,5 +95,6 @@ func CreateAwsSmOAuthProvider(
 		oAuthUrl:            oAuthUrl,
 		oAuthClientId:       oAuthClientId,
 		jwtClaimMap:         jwtClaimMap,
+		jwtExpiration:       jwtExpiration,
 	}, nil
 }
