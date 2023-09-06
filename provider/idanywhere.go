@@ -13,7 +13,7 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-type IdAnywhere struct {
+type AwsSmOAuth struct {
 	cache               *cache.Cache
 	awsSecretsManager   *secretcache.Cache
 	certificateSecretId string
@@ -22,7 +22,7 @@ type IdAnywhere struct {
 	jwtClaimMap         map[string]interface{}
 }
 
-func (provider IdAnywhere) GetSecret(requestConfig RequestConfig) (secret string, err error) {
+func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string, err error) {
 	rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
 	if err != nil {
 		return
@@ -59,14 +59,14 @@ func (provider IdAnywhere) GetSecret(requestConfig RequestConfig) (secret string
 	return
 }
 
-func CreateIdAnywhereProvider(
+func CreateAwsSmOAuthProvider(
 	secretsManagerCacheTtl time.Duration,
 	certificateSecretId string,
 	oAuthUrl url.URL,
 	oAuthClientId string,
 	jwtClaimMap map[string]interface{},
-) (provider IdAnywhere, err error) {
-	log.Printf("Creating IdAnywhere provider with AWS Secrets Manager cache TTL as %s, certificate secret id as %s, OAuth Url as %s, OAuth client id as %s",
+) (provider AwsSmOAuth, err error) {
+	log.Printf("Creating Aws Secrets Manager + OAuth provider with AWS Secrets Manager cache TTL as %s, certificate secret id as %s, OAuth Url as %s, OAuth client id as %s",
 		secretsManagerCacheTtl.String(),
 		certificateSecretId,
 		oAuthUrl.String(),
@@ -86,7 +86,7 @@ func CreateIdAnywhereProvider(
 	cacheDefaultExpiration := 5 * time.Minute
 	cachePurgeFrequency := time.Hour
 	cache := cache.New(cacheDefaultExpiration, cachePurgeFrequency)
-	return IdAnywhere{
+	return AwsSmOAuth{
 		awsSecretsManager:   awsSecretsManagerCache,
 		cache:               cache,
 		certificateSecretId: certificateSecretId,

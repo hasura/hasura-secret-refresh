@@ -22,11 +22,12 @@ type Config struct {
 // a union of all config fields required by each provider
 type ProviderConfig struct {
 	CacheTtl               int64  `toml:"cache_ttl"`
-	SecretsManagerCacheTtl int64  `toml:"secrets_manager_cache_ttl"`
+	SecretsManagerCacheTtl int64  `toml:"certificate_cache_ttl"`
 	CertificateSecretId    string `toml:"certificate_secret_id"`
 	OauthUrl               string `toml:"oauth_url"`
 	OauthClientId          string `toml:"oauth_client_id"`
 	JwtClaimMap            string `toml:"jwt_claims_map"`
+	JwtExpiration          int64  `toml:"jwt_expiration"`
 }
 
 func ParseConfig(rawConfig []byte) (config Config, err error) {
@@ -43,8 +44,8 @@ func ParseConfig(rawConfig []byte) (config Config, err error) {
 			if err != nil {
 				return
 			}
-		} else if k == "idanywhere" {
-			provider_, err = getIdAnywhereProvider(v)
+		} else if k == "awssm_oauth" {
+			provider_, err = getAwsSmOAuthProvider(v)
 			if err != nil {
 				return
 			}
@@ -59,7 +60,7 @@ func getAwsSecretsManagerProvider(config ProviderConfig) (provider_ provider.Aws
 	return
 }
 
-func getIdAnywhereProvider(config ProviderConfig) (provider_ provider.IdAnywhere, err error) {
+func getAwsSmOAuthProvider(config ProviderConfig) (provider_ provider.AwsSmOAuth, err error) {
 	oAuthParsedUrl, err := url.Parse(config.OauthUrl)
 	if err != nil {
 		return
@@ -69,7 +70,7 @@ func getIdAnywhereProvider(config ProviderConfig) (provider_ provider.IdAnywhere
 	if err != nil {
 		return
 	}
-	provider_, err = provider.CreateIdAnywhereProvider(
+	provider_, err = provider.CreateAwsSmOAuthProvider(
 		time.Duration(config.SecretsManagerCacheTtl)*time.Second,
 		config.CertificateSecretId,
 		*oAuthParsedUrl,
