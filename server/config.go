@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/hasura/hasura-secret-refresh/provider"
 	awssm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
 	awssmOauth "github.com/hasura/hasura-secret-refresh/provider/aws_sm_oauth"
@@ -25,14 +24,14 @@ type Config struct {
 
 // a union of all config fields required by each provider
 type ProviderConfig struct {
-	TokenCacheTtl       int64  `toml:"token_cache_ttl"`
-	TokenCacheSize      int    `toml:"token_cache_size"`
-	CertificateCacheTtl int64  `toml:"certificate_cache_ttl"`
-	CertificateSecretId string `toml:"certificate_secret_id"`
-	OauthUrl            string `toml:"oauth_url"`
-	OauthClientId       string `toml:"oauth_client_id"`
-	JwtClaimMap         string `toml:"jwt_claims_map"`
-	JwtDuration         int64  `toml:"jwt_duration"`
+	TokenCacheTtl               int64  `json:"token_cache_ttl"`
+	TokenCacheSize      int    `json:"token_cache_size"`
+	CertificateCacheTtl int64  `json:"certificate_cache_ttl"`
+	CertificateSecretId    string `json:"certificate_secret_id"`
+	OauthUrl               string `json:"oauth_url"`
+	OauthClientId          string `json:"oauth_client_id"`
+	JwtClaimMap            string `json:"jwt_claims_map"`
+	JwtDuration         int64  `json:"jwt_duration"`
 }
 
 const (
@@ -40,25 +39,25 @@ const (
 	aws_sm_oauth        = "awssm_oauth"
 )
 
-func ParseConfig(rawConfig []byte, logger zerolog.Logger) (config Config, err error) {
-	parsedConfig := make(map[string]ProviderConfig)
+func ParseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (config Config, err error) {
 	config.Providers = make(map[string]provider.Provider)
-	_, err = toml.Decode(string(rawConfig), &parsedConfig)
-	if err != nil {
-		return
-	}
-	for k, v := range parsedConfig {
+	for k, v := range rawConfig {
 		var provider_ provider.Provider
+		var providerData ProviderConfig
+
+		marhalledValues, _ := json.Marshal(v)
+		_ = json.Unmarshal(marhalledValues, &providerData)
+
 		if k == aws_secrets_manager {
 			sublogger := logger.With().Str("provider_name", aws_secrets_manager).Logger()
-			provider_, err = getAwsSecretsManagerProvider(v, sublogger)
+			provider_, err = getAwsSecretsManagerProvider(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
 		} else if k == aws_sm_oauth {
 			sublogger := logger.With().Str("provider_name", aws_sm_oauth).Logger()
-			provider_, err = getAwsSmOAuthProvider(v, sublogger)
+			provider_, err = getAwsSmOAuthProvider(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
 				return

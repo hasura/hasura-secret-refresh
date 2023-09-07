@@ -1,4 +1,4 @@
-FROM golang:1.21.0-alpine
+FROM golang:1.21.0-alpine AS builder
 
 WORKDIR /app
 
@@ -6,6 +6,12 @@ COPY . .
 
 RUN go build -o hasura-secret-refresh
 
-EXPOSE 8080
+FROM alpine:3.18.3
 
-CMD ["./hasura-secret-refresh"]
+COPY --from=builder /app/hasura-secret-refresh /hasura-secret-refresh
+
+RUN chmod +x /hasura-secret-refresh
+
+EXPOSE 5353
+
+CMD ["/hasura-secret-refresh"]

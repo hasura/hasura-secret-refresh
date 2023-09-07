@@ -1,0 +1,9 @@
+aws_secrets_manager:
+  cache_ttl: 300
+
+idanywhere:
+  secrets_manager_cache_ttl: 300
+  certificate_secret_id: testSecret
+  oauth_url: 'http://localhost:8090'
+  oauth_client_id: mock_client_id
+  jwt_claims_map: '{"sub":"mocksub", "other_claim":"other_claim"}'
