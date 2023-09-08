@@ -44,7 +44,7 @@ func (provider AwsSmOAuth) GetSecret(secretId string) (secret string, err error)
 	if err != nil {
 		return
 	}
-	tokenString, err := provider.createJwtToken(rsaPrivateKeyPemRaw)
+	tokenString, err := CreateJwtToken(rsaPrivateKeyPemRaw, provider.jwtClaimMap, provider.jwtDuration, time.Now())
 	debugLogger = debugLogger.With().Str("created_jwt_token", tokenString).Logger()
 	if err != nil {
 		return
@@ -58,15 +58,19 @@ func (provider AwsSmOAuth) GetSecret(secretId string) (secret string, err error)
 	return accessToken, nil
 }
 
-func (provider AwsSmOAuth) createJwtToken(rsaPrivateKeyPemRaw string) (string, error) {
+func CreateJwtToken(
+	rsaPrivateKeyPemRaw string, claims map[string]interface{},
+	duration time.Duration, currentTime time.Time) (
+	jwtString string, err error,
+) {
 	rsaPrivateKeyPem, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPrivateKeyPemRaw))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error parsing rsa private key: %s", err)
 	}
-	jwtDuration := provider.jwtDuration
+	jwtDuration := duration
 	currentJwtClaim := make(map[string]interface{})
-	jwtExp := time.Now().Add(jwtDuration).Unix()
-	for k, v := range provider.jwtClaimMap {
+	jwtExp := currentTime.Add(jwtDuration).Unix()
+	for k, v := range claims {
 		currentJwtClaim[k] = v
 	}
 	currentJwtClaim["exp"] = jwtExp
