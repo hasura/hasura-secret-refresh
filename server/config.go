@@ -7,6 +7,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/hasura/hasura-secret-refresh/provider"
+	awssm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
+	awssmOauth "github.com/hasura/hasura-secret-refresh/provider/aws_sm_oauth"
+
 	"github.com/rs/zerolog"
 )
 
@@ -66,15 +69,15 @@ func ParseConfig(rawConfig []byte, logger zerolog.Logger) (config Config, err er
 	return
 }
 
-func getAwsSecretsManagerProvider(config ProviderConfig, logger zerolog.Logger) (provider_ provider.AwsSecretsManager, err error) {
-	provider_, err = provider.CreateAwsSecretsManagerProvider(
+func getAwsSecretsManagerProvider(config ProviderConfig, logger zerolog.Logger) (provider_ awssm.AwsSecretsManager, err error) {
+	provider_, err = awssm.CreateAwsSecretsManagerProvider(
 		time.Duration(config.TokenCacheTtl)*time.Second,
 		logger,
 	)
 	return
 }
 
-func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provider_ provider.AwsSmOAuth, err error) {
+func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provider_ awssmOauth.AwsSmOAuth, err error) {
 	oAuthParsedUrl, err := url.Parse(config.OauthUrl)
 	if err != nil {
 		return
@@ -84,7 +87,7 @@ func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provid
 	if err != nil {
 		return
 	}
-	provider_, err = provider.CreateAwsSmOAuthProvider(
+	provider_, err = awssmOauth.CreateAwsSmOAuthProvider(
 		time.Duration(config.CertificateCacheTtl)*time.Second,
 		config.CertificateSecretId,
 		*oAuthParsedUrl,

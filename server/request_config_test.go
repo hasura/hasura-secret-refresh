@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestTemplate_GetRequestConfig(t *testing.T) {
+func TestRequestConfig_GetRequestConfig(t *testing.T) {
 	mockHeaders := http.Header{
 		"X-Hasura-Forward-To":      {"http://someurl.com"},
 		"X-Hasura-Secret-Id":       {"some_secret_id"},
@@ -24,7 +24,7 @@ func TestTemplate_GetRequestConfig(t *testing.T) {
 	}
 }
 
-func TestTemplate_GetRequestConfigError(t *testing.T) {
+func TestRequestConfig_GetRequestConfigError(t *testing.T) {
 	mockHeaders := http.Header{
 		"X-Hasura-Secret-Id":       {"some_secret_id"},
 		"X-Hasura-Secret-Provider": {"some_provider_name"},
@@ -36,7 +36,7 @@ func TestTemplate_GetRequestConfigError(t *testing.T) {
 	}
 }
 
-func TestTemplate_IsRequestConfig(t *testing.T) {
+func TestRequestConfig_IsRequestConfig(t *testing.T) {
 	requestConfigHeaders := []string{
 		"X-Hasura-Forward-To",
 		"X-Hasura-Secret-Id",

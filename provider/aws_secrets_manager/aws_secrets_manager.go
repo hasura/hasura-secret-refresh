@@ -1,4 +1,4 @@
-package provider
+package aws_secrets_manager
 
 import (
 	"time"

@@ -1,11 +1,11 @@
-package provider
+package aws_secrets_manager
 
 import (
 	"testing"
 	"time"
 )
 
-func TestTemplate_GetCacheTtlFromDuration(t *testing.T) {
+func TestAwsSm_GetCacheTtlFromDuration(t *testing.T) {
 	testCases := map[time.Duration]int64{
 		time.Microsecond: 1000,
 		time.Second:      1000000000,
