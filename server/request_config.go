@@ -1,8 +1,9 @@
-package provider
+package server
 
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -48,13 +49,13 @@ var RequestConfigs = map[string]RequestConfigItem{
 	},
 }
 
-func GetRequestConfig(headers map[string]string) (
+func GetRequestConfig(headers http.Header) (
 	requestConfig RequestConfig, err error,
 ) {
 	notFoundHeaders := make([]string, 0, 0)
 	for k, v := range RequestConfigs {
-		val, ok := headers[k]
-		if !ok {
+		val := headers.Get(k)
+		if val == "" {
 			notFoundHeaders = append(notFoundHeaders, k)
 		}
 		v.UpdateRequestConfig(&requestConfig, val)

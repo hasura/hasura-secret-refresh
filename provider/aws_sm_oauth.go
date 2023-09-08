@@ -26,7 +26,7 @@ type AwsSmOAuth struct {
 	logger              zerolog.Logger
 }
 
-func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string, err error) {
+func (provider AwsSmOAuth) GetSecret(secretId string) (secret string, err error) {
 	debugLogger := provider.logger
 	defer func() {
 		if err != nil {
@@ -35,7 +35,7 @@ func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string
 			debugLogger.Debug().Msg("Completed aws+oauth flow")
 		}
 	}()
-	cachedToken, ok := provider.cache.Get(requestConfig.SecretId)
+	cachedToken, ok := provider.cache.Get(secretId)
 	if ok {
 		return cachedToken, nil
 	}
@@ -49,12 +49,12 @@ func (provider AwsSmOAuth) GetSecret(requestConfig RequestConfig) (secret string
 	if err != nil {
 		return
 	}
-	accessToken, err := provider.getTokenFromOAuthCall(requestConfig, tokenString, provider.logger)
+	accessToken, err := provider.getTokenFromOAuthCall(secretId, tokenString, provider.logger)
 	debugLogger = debugLogger.With().Str("token_from_oauth", accessToken).Logger()
 	if err != nil {
 		return
 	}
-	_ = provider.cache.Add(requestConfig.SecretId, accessToken)
+	_ = provider.cache.Add(secretId, accessToken)
 	return accessToken, nil
 }
 
@@ -79,7 +79,7 @@ func (provider AwsSmOAuth) createJwtToken(rsaPrivateKeyPemRaw string) (string, e
 }
 
 func (provider AwsSmOAuth) getTokenFromOAuthCall(
-	requestConfig RequestConfig,
+	secretId string,
 	tokenString string,
 	logger zerolog.Logger,
 ) (token string, err error) {
@@ -95,7 +95,7 @@ func (provider AwsSmOAuth) getTokenFromOAuthCall(
 	data.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 	data.Set("client_id", provider.oAuthClientId)
 	data.Set("client_assertion", tokenString)
-	data.Set("resource", requestConfig.SecretId)
+	data.Set("resource", secretId)
 	r, _ := http.NewRequest(http.MethodPost, provider.oAuthUrl.String(), strings.NewReader(data.Encode()))
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Accept", "application/x-www-form-url-encoded")

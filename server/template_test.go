@@ -1,4 +1,4 @@
-package process_secrets
+package server
 
 import (
 	"testing"

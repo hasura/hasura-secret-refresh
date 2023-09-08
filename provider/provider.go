@@ -1,5 +1,5 @@
 package provider
 
 type Provider interface {
-	GetSecret(requestConfig RequestConfig) (secret string, err error)
+	GetSecret(secretId string) (secret string, err error)
 }

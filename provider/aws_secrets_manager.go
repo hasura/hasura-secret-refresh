@@ -11,8 +11,8 @@ type AwsSecretsManager struct {
 	cache *secretcache.Cache
 }
 
-func (provider AwsSecretsManager) GetSecret(requestConfig RequestConfig) (secret string, err error) {
-	secret, err = provider.cache.GetSecretString(string(requestConfig.SecretId))
+func (provider AwsSecretsManager) GetSecret(secretId string) (secret string, err error) {
+	secret, err = provider.cache.GetSecretString(string(secretId))
 	return
 }
 

@@ -1,15 +1,16 @@
-package provider
+package server
 
 import (
+	"net/http"
 	"testing"
 )
 
 func TestTemplate_GetRequestConfig(t *testing.T) {
-	mockHeaders := map[string]string{
-		"X-Hasura-Forward-To":      "http://someurl.com",
-		"X-Hasura-Secret-Id":       "some_secret_id",
-		"X-Hasura-Secret-Provider": "some_provider_name",
-		"X-Hasura-Secret-Header":   "Bearer ##secret##",
+	mockHeaders := http.Header{
+		"X-Hasura-Forward-To":      {"http://someurl.com"},
+		"X-Hasura-Secret-Id":       {"some_secret_id"},
+		"X-Hasura-Secret-Provider": {"some_provider_name"},
+		"X-Hasura-Secret-Header":   {"Bearer ##secret##"},
 	}
 	response, err := GetRequestConfig(mockHeaders)
 	if err != nil {
@@ -24,10 +25,10 @@ func TestTemplate_GetRequestConfig(t *testing.T) {
 }
 
 func TestTemplate_GetRequestConfigError(t *testing.T) {
-	mockHeaders := map[string]string{
-		"X-Hasura-Secret-Id":       "some_secret_id",
-		"X-Hasura-Secret-Provider": "some_provider_name",
-		"X-Hasura-Secret-Header":   "Bearer ##secret##",
+	mockHeaders := http.Header{
+		"X-Hasura-Secret-Id":       {"some_secret_id"},
+		"X-Hasura-Secret-Provider": {"some_provider_name"},
+		"X-Hasura-Secret-Header":   {"Bearer ##secret##"},
 	}
 	_, err := GetRequestConfig(mockHeaders)
 	if err == nil {
