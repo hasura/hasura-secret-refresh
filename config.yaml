@@ -6,7 +6,7 @@ awssm_oauth:
   certificate_secret_id: "testSecret"
   token_cache_ttl: 300
   token_cache_size: 10
-  oauth_url: "https://aws-sm-oauth-demo.hasura.app/api/rest/oauth"
+  oauth_url: "https://0vmhwbsxti.execute-api.us-east-2.amazonaws.com/prod/oauth"
   oauth_client_id: "sample_client_id"
   jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
   jwt_duration: 300

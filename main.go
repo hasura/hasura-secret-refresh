@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
@@ -22,7 +21,8 @@ func main() {
 
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	configPath := viper.ConfigFileUsed()
-	logLevel := flag.String("log", "info", "set log level: debug, info, error")
+	//logLevel := flag.String("log", "info", "set log level: debug, info, error")
+	logLevel := viper.GetString("log_config.level")
 
 	initLogger := logger.With().
 		Str("config_file_path", configPath).
@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		initLogger.Fatal().Err(err).Msg("Unable to parse config file")
 	}
-	zLogLevel := getLogLevel(*logLevel, logger)
+	zLogLevel := getLogLevel(logLevel, logger)
 	zerolog.SetGlobalLevel(zLogLevel)
 	server.Serve(config, logger)
 }
