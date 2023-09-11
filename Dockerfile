@@ -4,14 +4,14 @@ WORKDIR /app
 
 COPY . .
 
-RUN go build -o hasura-secret-refresh
+RUN go build -o secrets-management-proxy
 
 FROM alpine:3.18.3
 
-COPY --from=builder /app/hasura-secret-refresh /hasura-secret-refresh
+COPY --from=builder /app/secrets-management-proxy /secrets-management-proxy
 
-RUN chmod +x /hasura-secret-refresh
+RUN chmod +x /secrets-management-proxy
 
 EXPOSE 5353
 
-CMD ["/hasura-secret-refresh"]
+CMD ["/secrets-management-proxy"]

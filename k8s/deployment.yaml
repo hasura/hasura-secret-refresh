@@ -23,6 +23,9 @@ spec:
               subPath: config.yaml
           ports:
             - containerPort: 8080
+          env:
+            - name: AWS_REGION
+              value: "us-west-2"
       volumes:
         - name: hasura-secret-refresh-configmap
           configMap:

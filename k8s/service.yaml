@@ -36,4 +36,4 @@ spec:
                 port:
                   number: 80
             pathType: ImplementationSpecific
-            path: /secret(/|$)(.*)/
+            path: /(|$)(.*)/
