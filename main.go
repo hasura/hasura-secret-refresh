@@ -1,31 +1,40 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"os"
 
 	"github.com/hasura/hasura-secret-refresh/server"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 func main() {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+
+	if err := viper.ReadInConfig(); err != nil {
+		panic(fmt.Errorf("fatal error config file: %w", err))
+		return
+	}
+
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
-	configPath := flag.String(server.ConfigFileCliFlag, server.ConfigFileDefaultPath, server.ConfigFileCliFlagDescription)
-	logLevel := flag.String("log", "info", "set log level: debug, info, error")
-	flag.Parse()
+	configPath := viper.ConfigFileUsed()
+	logLevel := viper.GetString("log_config.level")
+
 	initLogger := logger.With().
-		Str("config_file_path", *configPath).
+		Str("config_file_path", configPath).
 		Bool("is_default_path", server.IsDefaultPath(configPath)).
 		Logger()
-	data, err := os.ReadFile(*configPath)
-	if err != nil {
-		initLogger.Fatal().Err(err).Msg("Unable to read config file")
-	}
-	config, err := server.ParseConfig(data, logger)
+
+	conf := viper.GetViper().AllSettings()
+
+	config, err := server.ParseConfig(conf, logger)
 	if err != nil {
 		initLogger.Fatal().Err(err).Msg("Unable to parse config file")
 	}
-	zLogLevel := getLogLevel(*logLevel, logger)
+	zLogLevel := getLogLevel(logLevel, logger)
 	zerolog.SetGlobalLevel(zLogLevel)
 	server.Serve(config, logger)
 }

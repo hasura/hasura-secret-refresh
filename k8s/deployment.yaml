@@ -16,5 +16,20 @@ spec:
       containers:
         - name: hasura-secret-refresh
           image: varundey/test-repo:amd64
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: hasura-secret-refresh-configmap
+              mountPath: /config.yaml
+              subPath: config.yaml
           ports:
             - containerPort: 8080
+          env:
+            - name: AWS_REGION
+              value: "us-west-2"
+      volumes:
+        - name: hasura-secret-refresh-configmap
+          configMap:
+            name: hasura-secret-refresh-configmap
+            items:
+              - key: config.yaml
+                path: config.yaml

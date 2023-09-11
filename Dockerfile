@@ -1,11 +1,17 @@
-FROM golang:1.21.0-alpine
+FROM golang:1.21.0-alpine AS builder
 
 WORKDIR /app
 
 COPY . .
 
-RUN go build -o hasura-secret-refresh
+RUN go build -o secrets-management-proxy
 
-EXPOSE 8080
+FROM alpine:3.18.3
 
-CMD ["./hasura-secret-refresh"]
+COPY --from=builder /app/secrets-management-proxy /secrets-management-proxy
+
+RUN chmod +x /secrets-management-proxy
+
+EXPOSE 5353
+
+CMD ["/secrets-management-proxy"]

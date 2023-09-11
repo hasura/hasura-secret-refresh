@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hasura-secret-refresh-configmap
+data:
+  config.yaml: |
+    environment: prod
+
+    aws_secrets_manager:
+      cache_ttl: 300
+
+    awssm_oauth:
+      certificate_cache_ttl: 300
+      certificate_secret_id: "jpmc-test-certificate"
+      token_cache_ttl: 300
+      token_cache_size: 10
+      oauth_url: "https://0vmhwbsxti.execute-api.us-east-2.amazonaws.com/prod/oauth"
+      oauth_client_id: "sample_client_id"
+      jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
+      jwt_duration: 300
+    
+    log_config:
+      level: "info"

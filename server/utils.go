@@ -6,11 +6,8 @@ import (
 	"net/url"
 )
 
-func IsDefaultPath(configPath *string) bool {
-	if *configPath == ConfigFileDefaultPath {
-		return true
-	}
-	return false
+func IsDefaultPath(configPath string) bool {
+	return configPath == ConfigFileDefaultPath
 }
 
 /*
