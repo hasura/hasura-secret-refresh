@@ -21,7 +21,6 @@ func main() {
 
 	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	configPath := viper.ConfigFileUsed()
-	//logLevel := flag.String("log", "info", "set log level: debug, info, error")
 	logLevel := viper.GetString("log_config.level")
 
 	initLogger := logger.With().
