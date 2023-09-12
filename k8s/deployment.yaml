@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hasura-secret-refresh-deployment
+  name: secrets-management-proxy
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hasura-secret-refresh
+      app: hasura-secrets-management-proxy
   template:
     metadata:
       labels:
-        app: hasura-secret-refresh
+        app: hasura-secrets-management-proxy
     spec:
-      serviceAccountName: jpmc-secret-management-service-account-2
+      serviceAccountName: hasura-secrets-management-proxy-service-account
       containers:
-        - name: hasura-secret-refresh
+        - name: secrets-management-proxy
           image: varundey/test-repo:amd64
           imagePullPolicy: Always
           volumeMounts:
-            - name: hasura-secret-refresh-configmap
+            - name: secrets-management-proxy-configmap
               mountPath: /config.yaml
               subPath: config.yaml
           ports:
@@ -27,9 +27,9 @@ spec:
             - name: AWS_REGION
               value: "us-west-2"
       volumes:
-        - name: hasura-secret-refresh-configmap
+        - name: secrets-management-proxy-configmap
           configMap:
-            name: hasura-secret-refresh-configmap
+            name: secrets-management-proxy
             items:
               - key: config.yaml
                 path: config.yaml

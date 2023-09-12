@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: hasura-secret-refresh-service
+  name: secrets-management-proxy
 spec:
   selector:
-    app: hasura-secret-refresh
+    app: hasura-secrets-management-proxy
   ports:
     - protocol: TCP
       port: 80
@@ -17,13 +17,13 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: hasura-secret-refresh-ingress
+  name: secrets-management-proxy
   namespace: default
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
   labels:
-    app: hasura-secret-refresh-deployment
+    app: hasura-secrets-management-proxy
 spec:
   ingressClassName: nginx
   rules:
@@ -32,7 +32,7 @@ spec:
         paths:
           - backend:
               service:
-                name: hasura-secret-refresh-service
+                name: secrets-management-proxy
                 port:
                   number: 80
             pathType: ImplementationSpecific
