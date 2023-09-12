@@ -12,6 +12,4 @@ COPY --from=builder /app/secrets-management-proxy /secrets-management-proxy
 
 RUN chmod +x /secrets-management-proxy
 
-EXPOSE 5353
-
-CMD ["/secrets-management-proxy"]
+CMD ["/secrets-management-proxy", "--bind-addr=127.0.0.1:5353"]
