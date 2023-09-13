@@ -13,8 +13,9 @@ import (
 func GetRequestRewriteDetails(
 	rw http.ResponseWriter, r *http.Request, providers map[string]provider.Provider, requestLogger zerolog.Logger,
 ) (
-	url *url.URL, headerKey string, headerVal string,
+	url *url.URL, headerKey string, headerVal string, providerDeleteConfigHeader func(*http.Header), ok bool,
 ) {
+	providerDeleteConfigHeader = func(*http.Header) {}
 	requestConfig, ok := getRequestConfig(rw, r, requestLogger)
 	if !ok {
 		return
@@ -27,6 +28,7 @@ func GetRequestRewriteDetails(
 	if !ok {
 		return
 	}
+	providerDeleteConfigHeader = provider.DeleteConfigHeaders
 	secret, ok := getSecret(rw, r, requestConfig, provider, requestLogger)
 	if !ok {
 		return
@@ -38,11 +40,11 @@ func GetRequestRewriteDetails(
 	return
 }
 
-func GetRequestRewriter(url *url.URL, headerKey string, headerVal string) func(req *httputil.ProxyRequest) {
+func GetRequestRewriter(url *url.URL, headerKey string, headerVal string,
+	providerDeleteConfigHeader func(*http.Header)) func(req *httputil.ProxyRequest) {
 	return func(req *httputil.ProxyRequest) {
-		for k, _ := range RequestConfigs {
-			req.Out.Header.Del(k)
-		}
+		DeleteConfigHeaders(&req.Out.Header)
+		providerDeleteConfigHeader(&req.Out.Header)
 		req.SetURL(url)
 		req.Out.Header.Set(headerKey, headerVal)
 	}
@@ -98,10 +100,18 @@ func getSecret(
 	requestConfig RequestConfig, provider provider.Provider, requestLogger zerolog.Logger,
 ) (secret string, ok bool) {
 	ok = true
-	secret, err := provider.GetSecret(requestConfig.SecretId)
+	getSecret, err := provider.ParseRequestConfig(r.Header)
 	if err != nil {
 		ok = false
-		errMsg := fmt.Sprintf("Unable to fetch secret %s sent in header %s", requestConfig.SecretId, SecretIdHeader)
+		errMsg := fmt.Sprintf("Required configurations not found in header")
+		requestLogger.Error().Err(err).Msgf(errMsg)
+		http.Error(rw, MakeHasuraError(errMsg), http.StatusBadRequest)
+		return
+	}
+	secret, err = getSecret()
+	if err != nil {
+		ok = false
+		errMsg := fmt.Sprintf("Unable to fetch secret")
 		requestLogger.Error().Err(err).Msgf(errMsg)
 		http.Error(rw, MakeHasuraError(errMsg), http.StatusBadRequest)
 		return

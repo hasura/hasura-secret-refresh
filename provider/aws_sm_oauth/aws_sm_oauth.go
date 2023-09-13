@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/hasura/hasura-secret-refresh/provider"
 	awssm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
 	"github.com/rs/zerolog"
 )
@@ -22,31 +23,40 @@ type AwsSmOAuth struct {
 	logger              zerolog.Logger
 }
 
-func (provider AwsSmOAuth) GetSecret(secretId string) (secret string, err error) {
-	cachedToken, ok := provider.cache.Get(secretId)
-	if ok {
-		return cachedToken, nil
-	}
-	rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
+func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetSecret, error) {
+	config, err := GetRequestConfig(header)
 	if err != nil {
-		return
+		return nil, err
 	}
-	tokenString, err := CreateJwtToken(rsaPrivateKeyPemRaw, provider.jwtClaimMap, provider.jwtDuration, time.Now())
-	if err != nil {
-		return
-	}
-	oAuthRequest := GetOauthRequest(tokenString, secretId, provider.oAuthClientId, &provider.oAuthUrl)
-	response, err := http.DefaultClient.Do(oAuthRequest)
-	if err != nil {
-		return
-	}
-	accessToken, err := GetAccessTokenFromResponse(response)
-	if err != nil {
-		return
-	}
-	_ = provider.cache.Add(secretId, accessToken)
-	return accessToken, nil
+	secretId := config.SecretId
+	return func() (secret string, err error) {
+		cachedToken, ok := provider.cache.Get(secretId)
+		if ok {
+			return cachedToken, nil
+		}
+		rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
+		if err != nil {
+			return
+		}
+		tokenString, err := CreateJwtToken(rsaPrivateKeyPemRaw, provider.jwtClaimMap, provider.jwtDuration, time.Now())
+		if err != nil {
+			return
+		}
+		oAuthRequest := GetOauthRequest(tokenString, secretId, provider.oAuthClientId, &provider.oAuthUrl)
+		response, err := http.DefaultClient.Do(oAuthRequest)
+		if err != nil {
+			return
+		}
+		accessToken, err := GetAccessTokenFromResponse(response)
+		if err != nil {
+			return
+		}
+		_ = provider.cache.Add(secretId, accessToken)
+		return accessToken, nil
+	}, nil
 }
+
+func (provider AwsSmOAuth) DeleteConfigHeaders(header *http.Header) {}
 
 func CreateAwsSmOAuthProvider(
 	certificateCacheTtl time.Duration,

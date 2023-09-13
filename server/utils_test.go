@@ -12,7 +12,7 @@ func TestServerUtils_IsDefaultPath(t *testing.T) {
 		"./configs/config.json": false,
 	}
 	for k, v := range testCases {
-		result := IsDefaultPath(&k)
+		result := IsDefaultPath(k)
 		if result != v {
 			t.Errorf("Got %t for path %s but expected %t", result, k, v)
 		}
