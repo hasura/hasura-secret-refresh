@@ -1,6 +1,7 @@
 package aws_sm_oauth
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -18,7 +19,7 @@ func logConfig(awsSmOAuth AwsSmOAuth, tokenCacheTtl time.Duration,
 		Int("token_cache_size", tokenCacheSize).
 		Str("jwt_duration", awsSmOAuth.jwtDuration.String()).
 		Dict("retry_config", zerolog.Dict().
-			Str("max_attempts", string(awsSmOAuth.httpClient.RetryMax)).
+			Str("max_attempts", fmt.Sprint(awsSmOAuth.httpClient.RetryMax)).
 			Str("min_wait", awsSmOAuth.httpClient.RetryWaitMin.String()).
 			Str("max_wait", awsSmOAuth.httpClient.RetryWaitMax.String())).
 		Msg("Creating provider")

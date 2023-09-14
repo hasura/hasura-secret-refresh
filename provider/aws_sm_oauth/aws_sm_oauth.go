@@ -47,7 +47,11 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 			return
 		}
 		oAuthRequest := GetOauthRequest(tokenString, config.BackendApiId, config.OAuthClientId, &provider.oAuthUrl)
-		response, err := provider.httpClient.Do(oAuthRequest)
+		retryRequest, err := retryablehttp.FromRequest(oAuthRequest)
+		if err != nil {
+			return
+		}
+		response, err := provider.httpClient.Do(retryRequest)
 		if err != nil {
 			return
 		}
@@ -79,7 +83,10 @@ func CreateAwsSmOAuthProvider(
 	if err != nil {
 		return provider, fmt.Errorf("Error initializing secrets manager client: %s", err)
 	}
-	smClient := secretsmanager.New(sess, aws.NewConfig().WithRegion(certificateRegion))
+	httpClient := getHttpClient(httpRetryAttempts, httpRetryMinWait, httpRetryMaxWait)
+	smClient := secretsmanager.New(sess, aws.NewConfig().
+		WithRegion(certificateRegion).
+		WithHTTPClient(httpClient.StandardClient()))
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
 			c.CacheConfig.CacheItemTTL = awssm.GetCacheTtlFromDuration(certificateCacheTtl)
@@ -92,7 +99,6 @@ func CreateAwsSmOAuthProvider(
 		return
 	}
 	cache := expirable.NewLRU[RequestConfig, string](tokenCacheSize, nil, tokenCacheTtl)
-	httpClient := getHttpClient(httpRetryAttempts, httpRetryMinWait, httpRetryMaxWait)
 	provider = AwsSmOAuth{
 		awsSecretsManager: awsSecretsManagerCache,
 		certificateRegion: certificateRegion,

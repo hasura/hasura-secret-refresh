@@ -7,15 +7,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/hashicorp/go-retryablehttp"
 )
 
 func GetOauthRequest(jwtToken string, secretId string,
 	oAuthClientId string, oAuthUrl *url.URL,
-) *retryablehttp.Request {
+) *http.Request {
 	formData := getFormData(oAuthClientId, jwtToken, secretId)
-	r, _ := retryablehttp.NewRequest(http.MethodPost, oAuthUrl.String(), strings.NewReader(formData.Encode()))
+	r, _ := http.NewRequest(http.MethodPost, oAuthUrl.String(), strings.NewReader(formData.Encode()))
 	headers := getHeaders()
 	for k, v := range headers {
 		r.Header.Set(k, v)
