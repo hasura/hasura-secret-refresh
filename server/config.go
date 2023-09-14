@@ -30,6 +30,9 @@ type ProviderConfig struct {
 	OauthUrl            string `json:"oauth_url"`
 	JwtClaimMap         string `json:"jwt_claims_map"`
 	JwtDuration         int64  `json:"jwt_duration"`
+	HttpMaxRetries      int    `json:"http_retry_attempts"`
+	HttpRetryMinWait    int64  `json:"http_retry_min_wait"`
+	HttpRetryMaxWait    int64  `json:"http_retry_max_wait"`
 }
 
 const (
@@ -91,6 +94,9 @@ func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provid
 		time.Duration(config.TokenCacheTtl)*time.Second,
 		config.TokenCacheSize,
 		time.Duration(config.JwtDuration)*time.Second,
+		time.Duration(config.HttpRetryMinWait)*time.Second,
+		time.Duration(config.HttpRetryMaxWait)*time.Second,
+		config.HttpMaxRetries,
 		logger,
 	)
 	return

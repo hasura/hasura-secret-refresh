@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/hasura/hasura-secret-refresh/provider"
 	awssm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
@@ -18,6 +19,7 @@ type AwsSmOAuth struct {
 	oAuthUrl          url.URL
 	jwtClaimMap       map[string]interface{}
 	jwtDuration       time.Duration
+	httpClient        *retryablehttp.Client
 	logger            zerolog.Logger
 }
 
@@ -62,6 +64,9 @@ func CreateAwsSmOAuthProvider(
 	tokenCacheTtl time.Duration,
 	tokenCacheSize int,
 	jwtDuration time.Duration,
+	httpRetryMinWait time.Duration,
+	httpRetryMaxWait time.Duration,
+	httpRetryAttempts int,
 	logger zerolog.Logger,
 ) (provider AwsSmOAuth, err error) {
 	awsSecretsManagerCache, err := secretcache.New(
@@ -73,14 +78,24 @@ func CreateAwsSmOAuthProvider(
 		return
 	}
 	cache := expirable.NewLRU[RequestConfig, string](tokenCacheSize, nil, tokenCacheTtl)
+	httpClient := getHttpClient(httpRetryAttempts, httpRetryMinWait, httpRetryMaxWait)
 	provider = AwsSmOAuth{
 		awsSecretsManager: awsSecretsManagerCache,
 		cache:             cache,
 		oAuthUrl:          oAuthUrl,
 		jwtClaimMap:       jwtClaimMap,
 		jwtDuration:       jwtDuration,
+		httpClient:        httpClient,
 		logger:            logger,
 	}
 	logConfig(provider, tokenCacheTtl, tokenCacheSize, logger)
 	return
+}
+
+func getHttpClient(maxRetry int, minWaitSeconds time.Duration, maxWaitSeconds time.Duration) *retryablehttp.Client {
+	retryableHttpClient := retryablehttp.NewClient()
+	retryableHttpClient.RetryMax = maxRetry
+	retryableHttpClient.RetryWaitMin = time.Duration(minWaitSeconds) * time.Second
+	retryableHttpClient.RetryWaitMax = time.Duration(maxWaitSeconds) * time.Second
+	return retryableHttpClient
 }

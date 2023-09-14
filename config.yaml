@@ -10,6 +10,9 @@ awssm_oauth:
   oauth_client_id: "sample_client_id"
   jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
   jwt_duration: 300
+  http_retry_attempts: 3
+  http_retry_min_wait: 3
+  http_retry_max_wait: 10
 
 log_config:
   level: "info"

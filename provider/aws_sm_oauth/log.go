@@ -16,5 +16,9 @@ func logConfig(awsSmOAuth AwsSmOAuth, tokenCacheTtl time.Duration,
 		Str("token_cache_ttl", tokenCacheTtl.String()).
 		Int("token_cache_size", tokenCacheSize).
 		Str("jwt_duration", awsSmOAuth.jwtDuration.String()).
+		Dict("retry_config", zerolog.Dict().
+			Str("max_attempts", string(awsSmOAuth.httpClient.RetryMax)).
+			Str("min_wait", awsSmOAuth.httpClient.RetryWaitMin.String()).
+			Str("max_wait", awsSmOAuth.httpClient.RetryWaitMax.String())).
 		Msg("Creating provider")
 }
