@@ -64,7 +64,9 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 	}, nil
 }
 
-func (provider AwsSmOAuth) DeleteConfigHeaders(header *http.Header) {}
+func (provider AwsSmOAuth) DeleteConfigHeaders(header *http.Header) {
+	DeleteConfigHeaders(header)
+}
 
 func CreateAwsSmOAuthProvider(
 	certificateCacheTtl time.Duration,
