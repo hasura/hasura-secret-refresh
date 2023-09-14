@@ -43,7 +43,7 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 		if err != nil {
 			return
 		}
-		provider.logger.Debug().Str("aws_secret_id", config.CertificateSecretId).Str("aws_response", rsaPrivateKeyPemRaw)
+		provider.logger.Debug().Str("aws_secret_id", config.CertificateSecretId).Str("aws_response", rsaPrivateKeyPemRaw).Msg("Response from aws secrets manager")
 		tokenString, err := CreateJwtToken(rsaPrivateKeyPemRaw, provider.jwtClaimMap, provider.jwtDuration, time.Now())
 		if err != nil {
 			return
