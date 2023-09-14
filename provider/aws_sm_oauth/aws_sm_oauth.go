@@ -121,7 +121,7 @@ func CreateAwsSmOAuthProvider(
 func getHttpClient(maxRetry int, minWaitSeconds time.Duration, maxWaitSeconds time.Duration) *retryablehttp.Client {
 	retryableHttpClient := retryablehttp.NewClient()
 	retryableHttpClient.RetryMax = maxRetry
-	retryableHttpClient.RetryWaitMin = time.Duration(minWaitSeconds) * time.Second
-	retryableHttpClient.RetryWaitMax = time.Duration(maxWaitSeconds) * time.Second
+	retryableHttpClient.RetryWaitMin = minWaitSeconds
+	retryableHttpClient.RetryWaitMax = maxWaitSeconds
 	return retryableHttpClient
 }
