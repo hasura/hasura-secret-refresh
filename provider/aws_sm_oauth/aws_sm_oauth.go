@@ -1,10 +1,14 @@
 package aws_sm_oauth
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-secretsmanager-caching-go/secretcache"
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/golang-lru/v2/expirable"
@@ -15,6 +19,7 @@ import (
 
 type AwsSmOAuth struct {
 	cache             *expirable.LRU[RequestConfig, string]
+	certificateRegion string
 	awsSecretsManager *secretcache.Cache
 	oAuthUrl          url.URL
 	jwtClaimMap       map[string]interface{}
@@ -42,7 +47,7 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 			return
 		}
 		oAuthRequest := GetOauthRequest(tokenString, config.BackendApiId, config.OAuthClientId, &provider.oAuthUrl)
-		response, err := http.DefaultClient.Do(oAuthRequest)
+		response, err := provider.httpClient.Do(oAuthRequest)
 		if err != nil {
 			return
 		}
@@ -59,6 +64,7 @@ func (provider AwsSmOAuth) DeleteConfigHeaders(header *http.Header) {}
 
 func CreateAwsSmOAuthProvider(
 	certificateCacheTtl time.Duration,
+	certificateRegion string,
 	oAuthUrl url.URL,
 	jwtClaimMap map[string]interface{},
 	tokenCacheTtl time.Duration,
@@ -69,9 +75,17 @@ func CreateAwsSmOAuthProvider(
 	httpRetryAttempts int,
 	logger zerolog.Logger,
 ) (provider AwsSmOAuth, err error) {
+	sess, err := session.NewSession()
+	if err != nil {
+		return provider, fmt.Errorf("Error initializing secrets manager client: %s", err)
+	}
+	smClient := secretsmanager.New(sess, aws.NewConfig().WithRegion(certificateRegion))
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
 			c.CacheConfig.CacheItemTTL = awssm.GetCacheTtlFromDuration(certificateCacheTtl)
+		},
+		func(c *secretcache.Cache) {
+			c.Client = smClient
 		},
 	)
 	if err != nil {
@@ -81,6 +95,7 @@ func CreateAwsSmOAuthProvider(
 	httpClient := getHttpClient(httpRetryAttempts, httpRetryMinWait, httpRetryMaxWait)
 	provider = AwsSmOAuth{
 		awsSecretsManager: awsSecretsManagerCache,
+		certificateRegion: certificateRegion,
 		cache:             cache,
 		oAuthUrl:          oAuthUrl,
 		jwtClaimMap:       jwtClaimMap,

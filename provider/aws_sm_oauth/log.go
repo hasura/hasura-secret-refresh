@@ -12,6 +12,7 @@ func logConfig(awsSmOAuth AwsSmOAuth, tokenCacheTtl time.Duration,
 	certificateCacheTtl := time.Duration(awsSmOAuth.awsSecretsManager.CacheConfig.CacheItemTTL) * time.Nanosecond
 	logger.Info().
 		Str("certificate_cache_ttl", certificateCacheTtl.String()).
+		Str("certificate_region", awsSmOAuth.certificateRegion).
 		Str("oauth_url", awsSmOAuth.oAuthUrl.String()).
 		Str("token_cache_ttl", tokenCacheTtl.String()).
 		Int("token_cache_size", tokenCacheSize).

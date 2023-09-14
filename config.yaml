@@ -4,6 +4,7 @@ aws_secrets_manager:
 awssm_oauth:
   certificate_cache_ttl: 300
   certificate_secret_id: "testSecret"
+  certificate_region: "us-east-2"
   token_cache_ttl: 300
   token_cache_size: 10
   oauth_url: "https://0vmhwbsxti.execute-api.us-east-2.amazonaws.com/prod/oauth"
