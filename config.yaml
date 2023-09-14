@@ -3,12 +3,10 @@ aws_secrets_manager:
 
 awssm_oauth:
   certificate_cache_ttl: 300
-  certificate_secret_id: "testSecret"
   certificate_region: "us-east-2"
   token_cache_ttl: 300
   token_cache_size: 10
-  oauth_url: "https://0vmhwbsxti.execute-api.us-east-2.amazonaws.com/prod/oauth"
-  oauth_client_id: "sample_client_id"
+  oauth_url: "http://localhost:8090"
   jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
   jwt_duration: 300
   http_retry_attempts: 3
