@@ -41,12 +41,13 @@ func GetRequestRewriteDetails(
 }
 
 func GetRequestRewriter(url *url.URL, headerKey string, headerVal string,
-	providerDeleteConfigHeader func(*http.Header)) func(req *httputil.ProxyRequest) {
+	providerDeleteConfigHeader func(*http.Header), requestLogger zerolog.Logger) func(req *httputil.ProxyRequest) {
 	return func(req *httputil.ProxyRequest) {
 		DeleteConfigHeaders(&req.Out.Header)
 		providerDeleteConfigHeader(&req.Out.Header)
 		req.SetURL(url)
 		req.Out.Header.Set(headerKey, headerVal)
+		LogRequest(req.Out, false, "Sending request to backend service", requestLogger)
 	}
 }
 

@@ -1,4 +1,4 @@
-package log
+package server
 
 import (
 	"net/http"
@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	requestLogType = "request_log"
+	requestLogType  = "request_log"
+	responseLogType = "response_log"
 )
 
 /*

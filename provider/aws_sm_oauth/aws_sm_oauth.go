@@ -42,11 +42,13 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 		if err != nil {
 			return
 		}
+		provider.logger.Debug().Str("aws_secret_id", config.CertificateSecretId).Str("aws_response", rsaPrivateKeyPemRaw)
 		tokenString, err := CreateJwtToken(rsaPrivateKeyPemRaw, provider.jwtClaimMap, provider.jwtDuration, time.Now())
 		if err != nil {
 			return
 		}
 		oAuthRequest := GetOauthRequest(tokenString, config.BackendApiId, config.OAuthClientId, &provider.oAuthUrl)
+		logOauthRequest(oAuthRequest, "Sending request to oauth endpoint", provider.logger)
 		retryRequest, err := retryablehttp.FromRequest(oAuthRequest)
 		if err != nil {
 			return
@@ -55,6 +57,7 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 		if err != nil {
 			return
 		}
+		logOAuthResponse(response, "Response from oauth endpoint", provider.logger)
 		accessToken, err := GetAccessTokenFromResponse(response)
 		if err != nil {
 			return

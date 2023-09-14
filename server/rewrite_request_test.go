@@ -220,7 +220,7 @@ func TestRequestRewriter_HeadersAreRemoved(t *testing.T) {
 	providerDeleteHeaders := func(header *http.Header) {
 		header.Del("X-Hasura-Secret-Id")
 	}
-	rewriter := GetRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders)
+	rewriter := GetRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders, zerolog.Nop())
 	rewriter(&proxyRequest)
 	numOutHeaders := len(proxyRequest.Out.Header)
 	if numOutHeaders != numInHeaders-3 {
@@ -273,7 +273,7 @@ func TestRequestRewriter_OutGoingUrl(t *testing.T) {
 			In:  mockRequest,
 			Out: mockRequest,
 		}
-		rewriter := GetRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders)
+		rewriter := GetRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders, zerolog.Nop())
 		rewriter(&proxyRequest)
 		if proxyRequest.Out.URL.String() != v.outgoingUrl {
 			t.Errorf("Expected URL to be %s but it was %s", v.outgoingUrl, proxyRequest.Out.URL.String())

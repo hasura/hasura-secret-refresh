@@ -26,9 +26,13 @@ func GetAccessTokenFromResponse(response *http.Response) (token string, err erro
 	responseJson := make(map[string]interface{})
 	err = json.NewDecoder(response.Body).Decode(&responseJson)
 	if err != nil {
-		return
+		return "", fmt.Errorf("Error converting oauth response to json: %s", err)
 	}
-	token, ok := responseJson["access_token"].(string)
+	_, ok := responseJson["access_token"]
+	if !ok {
+		return "", fmt.Errorf("Key 'access_token' not found in the response from oauth endpoint")
+	}
+	token, ok = responseJson["access_token"].(string)
 	if !ok {
 		return token, errors.New(fmt.Sprintf("Error converting token to string"))
 	}
