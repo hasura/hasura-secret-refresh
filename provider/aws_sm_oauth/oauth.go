@@ -6,19 +6,19 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 func GetOauthRequest(jwtToken string, secretId string,
 	oAuthClientId string, oAuthUrl *url.URL,
-) *http.Request {
-	formData := getFormData(oAuthClientId, jwtToken, secretId)
-	r, _ := http.NewRequest(http.MethodPost, oAuthUrl.String(), strings.NewReader(formData.Encode()))
+) (method string, formData url.Values, header http.Header) {
+	formData = getFormData(oAuthClientId, jwtToken, secretId)
+	method = http.MethodPost
 	headers := getHeaders()
+	header = http.Header{}
 	for k, v := range headers {
-		r.Header.Set(k, v)
+		header.Set(k, v)
 	}
-	return r
+	return
 }
 
 func GetAccessTokenFromResponse(response *http.Response) (token string, err error) {

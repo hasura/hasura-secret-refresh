@@ -13,50 +13,46 @@ func TestOauth_OauthRequest(t *testing.T) {
 	mockSecretId := "mock_secret_id"
 	mockOauthClientId := "mock_oauth_client_id"
 	mockOAuthUrl, _ := url.Parse("http://oauth.com/token")
-	request := GetOauthRequest(mockJwtToken, mockSecretId, mockOauthClientId, mockOAuthUrl)
-	if request.Method != http.MethodPost {
+	oAuthMethod, oAuthFormData, oAuthHeader := GetOauthRequest(mockJwtToken, mockSecretId, mockOauthClientId, mockOAuthUrl)
+	if oAuthMethod != http.MethodPost {
 		t.Errorf("Expected method to be %s but got %s", http.MethodPost, http.MethodGet)
 	}
-	request.ParseForm()
 	expectedGrantType := "client_credentials"
-	grantType := request.Form.Get("grant_type")
+	grantType := oAuthFormData.Get("grant_type")
 	if grantType != expectedGrantType {
 		t.Errorf("Expected grant_type to be %s but received %s", expectedGrantType, grantType)
 	}
 	expectedClientAssertionType := "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-	clientAssertionType := request.Form.Get("client_assertion_type")
+	clientAssertionType := oAuthFormData.Get("client_assertion_type")
 	if clientAssertionType != expectedClientAssertionType {
 		t.Errorf("Expected client_assertion_type to be %s but received %s", expectedClientAssertionType, clientAssertionType)
 	}
 	expectedClientId := mockOauthClientId
-	clientId := request.Form.Get("client_id")
+	clientId := oAuthFormData.Get("client_id")
 	if clientId != expectedClientId {
 		t.Errorf("Expected client_id to be %s but received %s", expectedClientId, clientId)
 	}
 	expectedClientAssertion := mockJwtToken
-	clientAssertion := request.Form.Get("client_assertion")
+	clientAssertion := oAuthFormData.Get("client_assertion")
 	if clientAssertion != expectedClientAssertion {
 		t.Errorf("Expected client_assertion to be %s but received %s", expectedClientAssertion, clientAssertion)
 	}
 	expectedResource := mockSecretId
-	resource := request.Form.Get("resource")
+	resource := oAuthFormData.Get("resource")
 	if resource != expectedResource {
 		t.Errorf("Expected resource to be %s but received %s", expectedResource, resource)
 	}
-	if len(request.Form) != 5 {
+	if len(oAuthFormData) != 5 {
 		t.Errorf("Unexpected form data found in request")
 	}
-	if request.URL.String() != mockOAuthUrl.String() {
-		t.Errorf("Expected url %s but received %s", mockOAuthUrl.String(), request.URL.String())
-	}
-	if request.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-		t.Errorf("Unexpected value '%s' in header Content-Type", request.Header.Get("Content-Type"))
+	if oAuthHeader.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		t.Errorf("Unexpected value '%s' in header Content-Type", oAuthHeader.Get("Content-Type"))
 	}
 
-	if request.Header.Get("Accept") != "application/x-www-form-url-encoded" {
-		t.Errorf("Unexpected value '%s' in header Accept", request.Header.Get("Accept"))
+	if oAuthHeader.Get("Accept") != "application/x-www-form-url-encoded" {
+		t.Errorf("Unexpected value '%s' in header Accept", oAuthHeader.Get("Accept"))
 	}
-	if len(request.Header) != 2 {
+	if len(oAuthHeader) != 2 {
 		t.Errorf("Unexpected values in header")
 	}
 }

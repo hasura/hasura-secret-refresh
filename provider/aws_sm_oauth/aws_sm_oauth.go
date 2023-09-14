@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -47,13 +48,14 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 		if err != nil {
 			return
 		}
-		oAuthRequest := GetOauthRequest(tokenString, config.BackendApiId, config.OAuthClientId, &provider.oAuthUrl)
-		logOauthRequest(oAuthRequest, "Sending request to oauth endpoint", provider.logger)
-		retryRequest, err := retryablehttp.FromRequest(oAuthRequest)
+		oAuthMethod, oAuthFormData, oAuthHeader := GetOauthRequest(tokenString, config.BackendApiId, config.OAuthClientId, &provider.oAuthUrl)
+		oAuthRequest, _ := retryablehttp.NewRequest(oAuthMethod, provider.oAuthUrl.String(), strings.NewReader(oAuthFormData.Encode()))
+		oAuthRequest.Header = oAuthHeader
 		if err != nil {
-			return
+			return "", fmt.Errorf("Unable to create oauth request: %s", err)
 		}
-		response, err := provider.httpClient.Do(retryRequest)
+		logOauthRequest(provider.oAuthUrl, oAuthMethod, oAuthFormData, oAuthHeader, "Sending request to oauth endpoint", provider.logger)
+		response, err := provider.httpClient.Do(oAuthRequest)
 		if err != nil {
 			return
 		}

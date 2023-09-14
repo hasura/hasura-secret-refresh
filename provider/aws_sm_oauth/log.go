@@ -3,6 +3,7 @@ package aws_sm_oauth
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -26,20 +27,18 @@ func logConfig(awsSmOAuth AwsSmOAuth, tokenCacheTtl time.Duration,
 		Msg("Creating provider")
 }
 
-func logOauthRequest(request *http.Request, msg string, logger zerolog.Logger) {
-
+func logOauthRequest(url url.URL, method string, formData url.Values, header http.Header, msg string, logger zerolog.Logger) {
 	headerDict := zerolog.Dict()
-	for k, _ := range request.Header {
-		headerDict = headerDict.Str(k, request.Header.Get(k))
+	for k, _ := range header {
+		headerDict = headerDict.Str(k, header.Get(k))
 	}
-	request.ParseForm()
 	formDict := zerolog.Dict()
-	for k, _ := range request.Form {
-		formDict = formDict.Str(k, request.Form.Get(k))
+	for k, _ := range formData {
+		formDict = formDict.Str(k, formData.Get(k))
 	}
 	logger.Debug().
-		Str("host", request.Host).
-		Str("url", request.URL.String()).
+		Str("url", url.String()).
+		Str("method", method).
 		Str("log_type", "request_log").
 		Dict("headers", headerDict).
 		Dict("form", formDict).
