@@ -32,17 +32,15 @@ func logOauthRequest(request *http.Request, msg string, logger zerolog.Logger) {
 	for k, _ := range request.Header {
 		headerDict = headerDict.Str(k, request.Header.Get(k))
 	}
+	request.ParseForm()
 	formDict := zerolog.Dict()
 	for k, _ := range request.Form {
 		formDict = formDict.Str(k, request.Form.Get(k))
 	}
 	logger.Debug().
 		Str("host", request.Host).
-		Str("method", request.Method).
 		Str("url", request.URL.String()).
 		Str("log_type", "request_log").
-		Str("url", request.URL.String()).
-		Str("method", request.Method).
 		Dict("headers", headerDict).
 		Dict("form", formDict).
 		Msg(msg)
