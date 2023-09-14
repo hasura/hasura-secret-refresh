@@ -27,9 +27,7 @@ type ProviderConfig struct {
 	TokenCacheTtl       int64  `json:"token_cache_ttl"`
 	TokenCacheSize      int    `json:"token_cache_size"`
 	CertificateCacheTtl int64  `json:"certificate_cache_ttl"`
-	CertificateSecretId string `json:"certificate_secret_id"`
 	OauthUrl            string `json:"oauth_url"`
-	OauthClientId       string `json:"oauth_client_id"`
 	JwtClaimMap         string `json:"jwt_claims_map"`
 	JwtDuration         int64  `json:"jwt_duration"`
 }
@@ -88,9 +86,7 @@ func getAwsSmOAuthProvider(config ProviderConfig, logger zerolog.Logger) (provid
 	}
 	provider_, err = awssmOauth.CreateAwsSmOAuthProvider(
 		time.Duration(config.CertificateCacheTtl)*time.Second,
-		config.CertificateSecretId,
 		*oAuthParsedUrl,
-		config.OauthClientId,
 		claims,
 		time.Duration(config.TokenCacheTtl)*time.Second,
 		config.TokenCacheSize,

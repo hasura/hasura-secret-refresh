@@ -7,11 +7,15 @@ import (
 )
 
 type RequestConfig struct {
-	SecretId string
+	CertificateSecretId string
+	OAuthClientId       string
+	BackendApiId        string
 }
 
 const (
-	SecretIdHeader = "X-Hasura-Secret-Id"
+	CertificateSecretIdHeader = "X-Hasura-Certificate-Id"
+	OauthClientIdHeader       = "X-Hasura-Oauth-Client-Id"
+	BackendApiIdHeader        = "X-Hasura-Backend-Id"
 )
 
 func GetRequestConfig(headers http.Header) (
@@ -19,8 +23,16 @@ func GetRequestConfig(headers http.Header) (
 ) {
 	parseRequestConfigInput := []requestconfig.ParseRequestConfigInput{
 		{
-			HeaderName:   SecretIdHeader,
-			UpdateConfig: func(headerVal string) { requestConfig.SecretId = headerVal },
+			HeaderName:   CertificateSecretIdHeader,
+			UpdateConfig: func(headerVal string) { requestConfig.CertificateSecretId = headerVal },
+		},
+		{
+			HeaderName:   OauthClientIdHeader,
+			UpdateConfig: func(headerVal string) { requestConfig.OAuthClientId = headerVal },
+		},
+		{
+			HeaderName:   BackendApiIdHeader,
+			UpdateConfig: func(headerVal string) { requestConfig.BackendApiId = headerVal },
 		},
 	}
 	err = requestconfig.ParseRequestConfig(headers, parseRequestConfigInput)
@@ -31,6 +43,8 @@ func GetRequestConfig(headers http.Header) (
 }
 
 func DeleteConfigHeaders(headers *http.Header) {
-	headers.Del(SecretIdHeader)
+	headers.Del(CertificateSecretIdHeader)
+	headers.Del(OauthClientIdHeader)
+	headers.Del(BackendApiIdHeader)
 	return
 }

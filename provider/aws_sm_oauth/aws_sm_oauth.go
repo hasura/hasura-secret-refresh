@@ -13,14 +13,12 @@ import (
 )
 
 type AwsSmOAuth struct {
-	cache               *expirable.LRU[string, string]
-	awsSecretsManager   *secretcache.Cache
-	certificateSecretId string
-	oAuthUrl            url.URL
-	oAuthClientId       string
-	jwtClaimMap         map[string]interface{}
-	jwtDuration         time.Duration
-	logger              zerolog.Logger
+	cache             *expirable.LRU[RequestConfig, string]
+	awsSecretsManager *secretcache.Cache
+	oAuthUrl          url.URL
+	jwtClaimMap       map[string]interface{}
+	jwtDuration       time.Duration
+	logger            zerolog.Logger
 }
 
 func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetSecret, error) {
@@ -28,13 +26,12 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 	if err != nil {
 		return nil, err
 	}
-	secretId := config.SecretId
 	return func() (secret string, err error) {
-		cachedToken, ok := provider.cache.Get(secretId)
+		cachedToken, ok := provider.cache.Get(config)
 		if ok {
 			return cachedToken, nil
 		}
-		rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(provider.certificateSecretId)
+		rsaPrivateKeyPemRaw, err := provider.awsSecretsManager.GetSecretString(config.CertificateSecretId)
 		if err != nil {
 			return
 		}
@@ -42,7 +39,7 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 		if err != nil {
 			return
 		}
-		oAuthRequest := GetOauthRequest(tokenString, secretId, provider.oAuthClientId, &provider.oAuthUrl)
+		oAuthRequest := GetOauthRequest(tokenString, config.BackendApiId, config.OAuthClientId, &provider.oAuthUrl)
 		response, err := http.DefaultClient.Do(oAuthRequest)
 		if err != nil {
 			return
@@ -51,7 +48,7 @@ func (provider AwsSmOAuth) ParseRequestConfig(header http.Header) (provider.GetS
 		if err != nil {
 			return
 		}
-		_ = provider.cache.Add(secretId, accessToken)
+		_ = provider.cache.Add(config, accessToken)
 		return accessToken, nil
 	}, nil
 }
@@ -60,9 +57,7 @@ func (provider AwsSmOAuth) DeleteConfigHeaders(header *http.Header) {}
 
 func CreateAwsSmOAuthProvider(
 	certificateCacheTtl time.Duration,
-	certificateSecretId string,
 	oAuthUrl url.URL,
-	oAuthClientId string,
 	jwtClaimMap map[string]interface{},
 	tokenCacheTtl time.Duration,
 	tokenCacheSize int,
@@ -77,16 +72,14 @@ func CreateAwsSmOAuthProvider(
 	if err != nil {
 		return
 	}
-	cache := expirable.NewLRU[string, string](tokenCacheSize, nil, tokenCacheTtl)
+	cache := expirable.NewLRU[RequestConfig, string](tokenCacheSize, nil, tokenCacheTtl)
 	provider = AwsSmOAuth{
-		awsSecretsManager:   awsSecretsManagerCache,
-		cache:               cache,
-		certificateSecretId: certificateSecretId,
-		oAuthUrl:            oAuthUrl,
-		oAuthClientId:       oAuthClientId,
-		jwtClaimMap:         jwtClaimMap,
-		jwtDuration:         jwtDuration,
-		logger:              logger,
+		awsSecretsManager: awsSecretsManagerCache,
+		cache:             cache,
+		oAuthUrl:          oAuthUrl,
+		jwtClaimMap:       jwtClaimMap,
+		jwtDuration:       jwtDuration,
+		logger:            logger,
 	}
 	logConfig(provider, tokenCacheTtl, tokenCacheSize, logger)
 	return
