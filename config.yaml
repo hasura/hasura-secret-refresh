@@ -15,5 +15,12 @@ awssm_oauth:
   http_retry_min_wait: 3
   http_retry_max_wait: 10
 
+aws_secrets_manager_file:
+  type: "aws_secrets_manager_file"
+  region: "us-east-2"
+  refresh: 300
+  secret_id: testsecret
+  path: ./testsecret
+
 log_config:
   level: "info"

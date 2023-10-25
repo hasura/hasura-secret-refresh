@@ -1,9 +1,10 @@
-package server
+package main
 
 import (
 	"github.com/hasura/hasura-secret-refresh/provider"
 	awsSm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
 	awsSmOauth "github.com/hasura/hasura-secret-refresh/provider/aws_sm_oauth"
+	"github.com/hasura/hasura-secret-refresh/server"
 
 	"github.com/rs/zerolog"
 )
@@ -14,19 +15,18 @@ const (
 	ConfigFileCliFlagDescription = "path to config file"
 )
 
-type Config struct {
-	Providers map[string]provider.HttpProvider
-}
-
 const (
 	aws_secrets_manager = "aws_secrets_manager"
 	aws_sm_oauth        = "awssm_oauth"
+	aws_sm_file         = "aws_secrets_manager_file"
 )
 
-func ParseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (config Config, err error) {
+func ParseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (config server.Config, fileProviders []provider.FileProvider, err error) {
 	config.Providers = make(map[string]provider.HttpProvider)
+	fileProviders = make([]provider.FileProvider, 0, 0)
 	for k, v := range rawConfig {
 		var provider_ provider.HttpProvider
+		var fProvider_ provider.FileProvider
 		providerData, ok := v.(map[string]interface{})
 		if !ok {
 			logger.Error().Msgf("Failed to convert config to required type")
@@ -56,8 +56,20 @@ func ParseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
+		} else if providerType == aws_sm_file {
+			sublogger := logger.With().Str("provider_name", aws_sm_file).Logger()
+			fProvider_, err = awsSm.CreateAwsSecretsManagerFile(providerData, sublogger)
+			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
+				return
+			}
+			fileProviders = append(fileProviders, fProvider_)
 		}
 		config.Providers[k] = provider_
 	}
 	return
+}
+
+func IsDefaultPath(configPath string) bool {
+	return configPath == ConfigFileDefaultPath
 }

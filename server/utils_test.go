@@ -6,19 +6,6 @@ import (
 	"testing"
 )
 
-func TestServerUtils_IsDefaultPath(t *testing.T) {
-	testCases := map[string]bool{
-		"./config.json":         true,
-		"./configs/config.json": false,
-	}
-	for k, v := range testCases {
-		result := IsDefaultPath(k)
-		if result != v {
-			t.Errorf("Got %t for path %s but expected %t", result, k, v)
-		}
-	}
-}
-
 func TestServerUtils_MakeHasuraError(t *testing.T) {
 	mockErrorMessage := "Error"
 	expectedResultMap := map[string]interface{}{

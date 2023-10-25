@@ -6,10 +6,6 @@ import (
 	"net/url"
 )
 
-func IsDefaultPath(configPath string) bool {
-	return configPath == ConfigFileDefaultPath
-}
-
 /*
 	Generates an error in the format supported by Hasura actions.
 	Refer: https://hasura.io/docs/latest/actions/action-handlers/#returning-an-error-response

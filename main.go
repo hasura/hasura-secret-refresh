@@ -25,18 +25,21 @@ func main() {
 
 	initLogger := logger.With().
 		Str("config_file_path", configPath).
-		Bool("is_default_path", server.IsDefaultPath(configPath)).
+		Bool("is_default_path", IsDefaultPath(configPath)).
 		Logger()
 
 	conf := viper.GetViper().AllSettings()
 
-	config, err := server.ParseConfig(conf, logger)
+	config, fileProviders, err := ParseConfig(conf, logger)
 	if err != nil {
 		initLogger.Fatal().Err(err).Msg("Unable to parse config file")
 	}
 	zLogLevel := getLogLevel(logLevel, logger)
 	zerolog.SetGlobalLevel(zLogLevel)
 	server.Serve(config, logger)
+	for _, p := range fileProviders {
+		go p.Start()
+	}
 }
 
 func getLogLevel(level string, logger zerolog.Logger) zerolog.Level {

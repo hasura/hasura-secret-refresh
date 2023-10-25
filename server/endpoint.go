@@ -4,8 +4,13 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/rs/zerolog"
 )
+
+type Config struct {
+	Providers map[string]provider.HttpProvider
+}
 
 func Serve(config Config, logger zerolog.Logger) {
 	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {

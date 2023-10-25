@@ -7,6 +7,10 @@ type HttpProvider interface {
 	DeleteConfigHeaders(*http.Header)
 }
 
+type FileProvider interface {
+	Start()
+}
+
 type SecretFetcher interface {
 	FetchSecret() (string, error)
 }
