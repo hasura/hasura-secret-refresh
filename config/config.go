@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"github.com/hasura/hasura-secret-refresh/provider"

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hasura/hasura-secret-refresh/config"
 	"github.com/hasura/hasura-secret-refresh/server"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -25,12 +26,12 @@ func main() {
 
 	initLogger := logger.With().
 		Str("config_file_path", configPath).
-		Bool("is_default_path", IsDefaultPath(configPath)).
+		Bool("is_default_path", config.IsDefaultPath(configPath)).
 		Logger()
 
 	conf := viper.GetViper().AllSettings()
 
-	config, fileProviders, err := ParseConfig(conf, logger)
+	config, fileProviders, err := config.ParseConfig(conf, logger)
 	if err != nil {
 		initLogger.Fatal().Err(err).Msg("Unable to parse config file")
 	}
