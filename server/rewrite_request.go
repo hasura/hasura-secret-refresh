@@ -76,14 +76,17 @@ func getRequestConfig(
 	if forwardTo == "" {
 		missingHeaders = append(missingHeaders, forwardTo)
 	}
+	requestConfig.DestinationUrl = forwardTo
 	provider := r.Header.Get(SecretProviderHeader)
 	if provider == "" {
 		missingHeaders = append(missingHeaders, provider)
 	}
+	requestConfig.SecretProvider = provider
 	template := r.Header.Get(TemplateHeader)
 	if template == "" {
 		missingHeaders = append(missingHeaders, template)
 	}
+	requestConfig.HeaderTemplate = template
 	if len(missingHeaders) != 0 {
 		missingHeadersS := strings.Join(missingHeaders, ",")
 		err := fmt.Errorf("required headers not found: %s", missingHeadersS)
