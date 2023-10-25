@@ -25,6 +25,9 @@ func ParseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 	config.Providers = make(map[string]provider.HttpProvider)
 	fileProviders = make([]provider.FileProvider, 0, 0)
 	for k, v := range rawConfig {
+		if k == "log_config" {
+			continue
+		}
 		var provider_ provider.HttpProvider
 		var fProvider_ provider.FileProvider
 		providerData, ok := v.(map[string]interface{})
@@ -34,7 +37,7 @@ func ParseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 		}
 		providerTypeI, found := providerData["type"]
 		if !found {
-			logger.Error().Msgf("Provider type not specified. Ensure that the type is specified for every provider using the 'type' field")
+			logger.Error().Msgf("Provider type not specified for %s. Ensure that the type is specified for every provider using the 'type' field", k)
 			return
 		}
 		providerType, ok := providerTypeI.(string)

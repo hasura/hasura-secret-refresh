@@ -59,7 +59,7 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 		logger.Error().Msg("aws_secrets_manager_file: Config 'refresh' not found")
 		return AwsSecretsManagerFile{}, fmt.Errorf("required configs not found")
 	}
-	refreshIntervalInt, ok := refreshIntervalI.(int64)
+	refreshIntervalInt, ok := refreshIntervalI.(int)
 	if !ok {
 		logger.Error().Msg("aws_secrets_manager_file: 'refresh' must be an integer")
 		return AwsSecretsManagerFile{}, fmt.Errorf("config not valid")
@@ -74,6 +74,11 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 		secretId:        secretId,
 		logger:          logger,
 	}
+	logger.Info().
+		Str("refresh", refreshInterval.String()).
+		Str("file_path", filePath).
+		Str("secret_id", secretId).
+		Msg("Creating provider")
 	return awsSm, err
 }
 
@@ -86,14 +91,15 @@ func (provider AwsSecretsManagerFile) Start() {
 			},
 		)
 		if err != nil {
-			provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while retrieving secret from aws secrets manager")
+			provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while retrieving secret '%s' from aws secrets manager", provider.secretId)
+		} else {
+			secretString := res.SecretString
+			err = os.WriteFile(provider.filePath, []byte(*secretString), 0777)
+			if err != nil {
+				provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
+			}
+			provider.logger.Info().Msgf("aws_secrets_manager_file: Successfully fetched secret %s. Fetching again in %s", provider.secretId, provider.refreshInterval)
 		}
-		secretString := res.SecretString
-		err = os.WriteFile(provider.filePath, []byte(*secretString), 0644)
-		if err != nil {
-			provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
-		}
-		provider.logger.Info().Msgf("aws_secrets_manager_file: Successfully fetched secret %s", provider.secretId)
 		time.Sleep(provider.refreshInterval)
 	}
 }

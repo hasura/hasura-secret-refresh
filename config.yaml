@@ -19,7 +19,7 @@ aws_secrets_manager_file:
   type: "aws_secrets_manager_file"
   region: "us-east-2"
   refresh: 300
-  secret_id: testsecret
+  secret_id: testSecret
   path: ./testsecret
 
 log_config:

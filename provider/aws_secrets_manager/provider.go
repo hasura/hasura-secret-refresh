@@ -38,10 +38,10 @@ func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSecretsMa
 	if !ok {
 		cacheTtl = DefaultCacheTtl
 	} else {
-		cacheTtlI, ok := cacheTtl_.(int64)
+		cacheTtlI, ok := cacheTtl_.(int)
 		if !ok {
 			return nil, fmt.Errorf(
-				"%s: unable to convert cacheTtl to int", InitError,
+				"%s: unable to convert cacheTtl to number", InitError,
 			)
 		}
 		cacheTtl = time.Second * time.Duration(cacheTtlI)

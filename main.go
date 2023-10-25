@@ -36,10 +36,11 @@ func main() {
 	}
 	zLogLevel := getLogLevel(logLevel, logger)
 	zerolog.SetGlobalLevel(zLogLevel)
-	server.Serve(config, logger)
+	logger.Info().Msgf("%d file providers initialized", len(fileProviders))
 	for _, p := range fileProviders {
 		go p.Start()
 	}
+	server.Serve(config, logger)
 }
 
 func getLogLevel(level string, logger zerolog.Logger) zerolog.Level {
