@@ -5,13 +5,26 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/rs/zerolog"
 )
 
+const (
+	ForwardToHeader      = "X-Hasura-Forward-To"
+	SecretProviderHeader = "X-Hasura-Secret-Provider"
+	TemplateHeader       = "X-Hasura-Secret-Header"
+)
+
+type RequestConfig struct {
+	DestinationUrl string
+	SecretProvider string
+	HeaderTemplate string
+}
+
 func GetRequestRewriteDetails(
-	rw http.ResponseWriter, r *http.Request, providers map[string]provider.Provider, requestLogger zerolog.Logger,
+	rw http.ResponseWriter, r *http.Request, providers map[string]provider.HttpProvider, requestLogger zerolog.Logger,
 ) (
 	url *url.URL, headerKey string, headerVal string, providerDeleteConfigHeader func(*http.Header), ok bool,
 ) {
@@ -43,7 +56,9 @@ func GetRequestRewriteDetails(
 func GetRequestRewriter(url *url.URL, headerKey string, headerVal string,
 	providerDeleteConfigHeader func(*http.Header), requestLogger zerolog.Logger) func(req *httputil.ProxyRequest) {
 	return func(req *httputil.ProxyRequest) {
-		DeleteConfigHeaders(&req.Out.Header)
+		req.Out.Header.Del(ForwardToHeader)
+		req.Out.Header.Del(SecretProviderHeader)
+		req.Out.Header.Del(TemplateHeader)
 		providerDeleteConfigHeader(&req.Out.Header)
 		req.SetURL(url)
 		req.Out.Header.Set(headerKey, headerVal)
@@ -55,8 +70,23 @@ func getRequestConfig(
 	rw http.ResponseWriter, r *http.Request, requestLogger zerolog.Logger,
 ) (requestConfig RequestConfig, ok bool) {
 	ok = true
-	requestConfig, err := GetRequestConfig(r.Header)
-	if err != nil {
+	requestConfig = RequestConfig{}
+	missingHeaders := make([]string, 0, 0)
+	forwardTo := r.Header.Get(ForwardToHeader)
+	if forwardTo == "" {
+		missingHeaders = append(missingHeaders, forwardTo)
+	}
+	provider := r.Header.Get(SecretProviderHeader)
+	if provider == "" {
+		missingHeaders = append(missingHeaders, provider)
+	}
+	template := r.Header.Get(TemplateHeader)
+	if template == "" {
+		missingHeaders = append(missingHeaders, template)
+	}
+	if len(missingHeaders) != 0 {
+		missingHeadersS := strings.Join(missingHeaders, ",")
+		err := fmt.Errorf("required headers not found: %s", missingHeadersS)
 		ok = false
 		requestLogger.Error().Err(err).Msgf(err.Error())
 		http.Error(rw, MakeHasuraError(err.Error()), http.StatusBadRequest)
@@ -83,8 +113,8 @@ func parseDestinationUrl(
 
 func getProvider(
 	rw http.ResponseWriter, r *http.Request,
-	providers map[string]provider.Provider, requestConfig RequestConfig, requestLogger zerolog.Logger,
-) (provider provider.Provider, ok bool) {
+	providers map[string]provider.HttpProvider, requestConfig RequestConfig, requestLogger zerolog.Logger,
+) (provider provider.HttpProvider, ok bool) {
 	provider, ok = providers[requestConfig.SecretProvider]
 	if !ok {
 		errMsg := fmt.Sprintf("Provider name %s sent in header %s does not exist",
@@ -98,10 +128,10 @@ func getProvider(
 
 func getSecret(
 	rw http.ResponseWriter, r *http.Request,
-	requestConfig RequestConfig, provider provider.Provider, requestLogger zerolog.Logger,
+	requestConfig RequestConfig, provider provider.HttpProvider, requestLogger zerolog.Logger,
 ) (secret string, ok bool) {
 	ok = true
-	getSecret, err := provider.ParseRequestConfig(r.Header)
+	fetcher, err := provider.SecretFetcher(r.Header)
 	if err != nil {
 		ok = false
 		errMsg := fmt.Sprintf("Required configurations not found in header")
@@ -109,7 +139,7 @@ func getSecret(
 		http.Error(rw, MakeHasuraError(errMsg), http.StatusBadRequest)
 		return
 	}
-	secret, err = getSecret()
+	secret, err = fetcher.FetchSecret()
 	if err != nil {
 		ok = false
 		errMsg := fmt.Sprintf("Unable to fetch secret")

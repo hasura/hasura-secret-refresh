@@ -34,17 +34,24 @@ func getMockRequest(withUrl string, withHeaders map[string]string, t *testing.T)
 }
 
 type mockProvider struct{}
+type mockFetcher struct {
+	secretId string
+}
 
-func (_ mockProvider) ParseRequestConfig(header http.Header) (provider.GetSecret, error) {
+func (f mockFetcher) FetchSecret() (string, error) {
+	if f.secretId == "make_error" {
+		return "", errors.New("error")
+	}
+	return "topsecretval", nil
+}
+
+func (_ mockProvider) SecretFetcher(header http.Header) (provider.SecretFetcher, error) {
 	secretId := header.Get("X-Hasura-Secret-Id")
 	if secretId == "" {
 		return nil, fmt.Errorf("err")
 	}
-	return func() (secret string, err error) {
-		if secretId == "make_error" {
-			return "", errors.New("error")
-		}
-		return "topsecretval", nil
+	return mockFetcher{
+		secretId: secretId,
 	}, nil
 }
 
@@ -55,7 +62,7 @@ func (_ mockProvider) DeleteConfigHeaders(header *http.Header) {
 func TestGetRewriteDetails_WithMissingRequestConfig(t *testing.T) {
 	mockRequest := getMockRequest("http://somehost", nil, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
@@ -76,7 +83,7 @@ func TestGetRewriteDetails_WithInvalidUrl(t *testing.T) {
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
@@ -97,7 +104,7 @@ func TestGetRewriteDetails_WithInvalidProvider(t *testing.T) {
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
@@ -118,7 +125,7 @@ func TestGetRewriteDetails_WithInvalidSecret(t *testing.T) {
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
@@ -138,7 +145,7 @@ func TestGetRewriteDetails_WithMissingProviderConfig(t *testing.T) {
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
@@ -159,7 +166,7 @@ func TestGetRewriteDetails_WithInvalidHeaderTemplate(t *testing.T) {
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
@@ -180,7 +187,7 @@ func TestGetRewriteDetails_SuccessfulRequest(t *testing.T) {
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
-	providers := map[string]provider.Provider{
+	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
 	url, headerKey, headerVal, _, ok := GetRequestRewriteDetails(rw,

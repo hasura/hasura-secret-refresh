@@ -2,9 +2,11 @@ package provider
 
 import "net/http"
 
-type GetSecret func() (secret string, err error)
+type HttpProvider interface {
+	SecretFetcher(http.Header) (SecretFetcher, error)
+	DeleteConfigHeaders(*http.Header)
+}
 
-type Provider interface {
-	ParseRequestConfig(header http.Header) (GetSecret, error)
-	DeleteConfigHeaders(header *http.Header)
+type SecretFetcher interface {
+	FetchSecret() (string, error)
 }
