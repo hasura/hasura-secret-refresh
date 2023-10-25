@@ -1,7 +1,9 @@
 aws_secrets_manager:
+  type: "aws_secrets_manager"
   cache_ttl: 300
 
 awssm_oauth:
+  type: "awssm_oauth"
   certificate_cache_ttl: 300
   certificate_region: "us-east-2"
   token_cache_ttl: 300
