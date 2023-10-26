@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/hasura/hasura-secret-refresh/config"
@@ -44,7 +45,9 @@ func main() {
 	for _, p := range fileProviders {
 		go p.Start()
 	}
-	server.Serve(config, logger)
+	httpServer := server.Create(config, logger)
+	http.Handle("/", httpServer)
+	http.ListenAndServe(":5353", nil)
 }
 
 func getLogLevel(level string, logger zerolog.Logger) zerolog.Level {
