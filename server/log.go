@@ -16,7 +16,7 @@ const (
 	If form data must be shown, showForm must be set to true and
 	request.ParseForm() must be called before calling this function.
 */
-func LogRequest(
+func logRequest(
 	request *http.Request,
 	showForm bool,
 	msg string,

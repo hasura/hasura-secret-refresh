@@ -42,7 +42,7 @@ var testCases = []testCase{
 
 func TestTemplate_GetKeysFromTemplates(t *testing.T) {
 	for _, testCase := range testCases {
-		headerKey, headerVal, err := GetHeaderFromTemplate(testCase.template, testCase.substituteWith)
+		headerKey, headerVal, err := getHeaderFromTemplate(testCase.template, testCase.substituteWith)
 		if testCase.expectedIsErr && err == nil {
 			t.Errorf("Expected error in test %s but got no error", testCase.name)
 		}

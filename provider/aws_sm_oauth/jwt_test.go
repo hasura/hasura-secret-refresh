@@ -20,7 +20,7 @@ func TestJwt_TestJwtCreation(t *testing.T) {
 	fiveMins := time.Minute * 5
 	currentTime := time.Date(2023, time.January, int(time.Saturday), 0, 0, 0, 0, time.UTC)
 	fiveMinsLater := currentTime.Add(fiveMins)
-	token, err := CreateJwtToken(testRsaPrivateKeyPem, mockClaims, fiveMins, currentTime)
+	token, err := createJwtToken(testRsaPrivateKeyPem, mockClaims, fiveMins, currentTime)
 	if err != nil {
 		t.Fatalf("Jwt creation failed")
 	}
@@ -74,7 +74,7 @@ func TestJwt_TestJwtCreationFailure(t *testing.T) {
 	}
 	fiveMins := time.Minute * 5
 	currentTime := time.Date(2023, time.January, int(time.Saturday), 0, 0, 0, 0, time.UTC)
-	_, err := CreateJwtToken("invalid_rsa_key", mockClaims, fiveMins, currentTime)
+	_, err := createJwtToken("invalid_rsa_key", mockClaims, fiveMins, currentTime)
 	if err == nil {
 		t.Fatalf("Expected error because rsa key was invalid")
 	}

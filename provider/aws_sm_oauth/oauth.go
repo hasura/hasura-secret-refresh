@@ -8,7 +8,7 @@ import (
 	"net/url"
 )
 
-func GetOauthRequest(jwtToken string, secretId string,
+func getOauthRequest(jwtToken string, secretId string,
 	oAuthClientId string, oAuthUrl *url.URL,
 ) (method string, formData url.Values, header http.Header) {
 	formData = getFormData(oAuthClientId, jwtToken, secretId)
@@ -21,7 +21,7 @@ func GetOauthRequest(jwtToken string, secretId string,
 	return
 }
 
-func GetAccessTokenFromResponse(response *http.Response) (token string, err error) {
+func getAccessTokenFromResponse(response *http.Response) (token string, err error) {
 	defer response.Body.Close()
 	responseJson := make(map[string]interface{})
 	err = json.NewDecoder(response.Body).Decode(&responseJson)

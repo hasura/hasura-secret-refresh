@@ -10,7 +10,7 @@ import (
 	Generates an error in the format supported by Hasura actions.
 	Refer: https://hasura.io/docs/latest/actions/action-handlers/#returning-an-error-response
 */
-func MakeHasuraError(errorMsg string) string {
+func makeHasuraError(errorMsg string) string {
 	jsonMap := map[string]interface{}{
 		"message": errorMsg,
 		"extensions": map[string]string{
@@ -21,7 +21,7 @@ func MakeHasuraError(errorMsg string) string {
 	return string(json)
 }
 
-func GetUrlWithSchemeAndHost(inpUrl *url.URL) (newUrl *url.URL) {
+func getUrlWithSchemeAndHost(inpUrl *url.URL) (newUrl *url.URL) {
 	newUrl = &url.URL{
 		Scheme: inpUrl.Scheme,
 		Host:   inpUrl.Host,
@@ -29,7 +29,7 @@ func GetUrlWithSchemeAndHost(inpUrl *url.URL) (newUrl *url.URL) {
 	return
 }
 
-func ParseUrl(input string) (parsedUrl *url.URL, err error) {
+func parseUrl(input string) (parsedUrl *url.URL, err error) {
 	parsedUrl, err = url.Parse(input)
 	if err != nil {
 		return

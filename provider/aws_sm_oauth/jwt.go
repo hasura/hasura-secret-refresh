@@ -7,7 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func CreateJwtToken(
+func createJwtToken(
 	rsaPrivateKeyPemRaw string, claims map[string]interface{},
 	duration time.Duration, currentTime time.Time) (
 	jwtString string, err error,

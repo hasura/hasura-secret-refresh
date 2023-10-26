@@ -43,16 +43,16 @@ func TestEndpoint(t *testing.T) {
 	config.Providers = make(map[string]provider.HttpProvider)
 	config.Providers["mock_provider"] = mockProvider{}
 	server := Create(config, zerolog.Nop())
-	server.reverseProxy = func(rewrite Rewrite) httputil.ReverseProxy {
+	server.reverseProxy = func(rewrite rewriteRequest) httputil.ReverseProxy {
 		return httputil.ReverseProxy{
 			Transport: mockTransport{
 				requestValidation: func(req *http.Request) {
 					headers := req.Header
 					removedHeaders := []string{
-						headers.Get(ForwardToHeader),
+						headers.Get(forwardToHeader),
 						headers.Get("X-Hasura-Secret-Id"),
-						headers.Get(TemplateHeader),
-						headers.Get(SecretProviderHeader),
+						headers.Get(templateHeader),
+						headers.Get(secretProviderHeader),
 					}
 					for _, v := range removedHeaders {
 						if v != "" {
@@ -78,10 +78,10 @@ func TestEndpoint(t *testing.T) {
 		}
 	}
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "secret123",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://proxyserver/test", withHeaders, t)
 	rw := httptest.NewRecorder()
@@ -108,16 +108,16 @@ func TestEndpoint_Invalid(t *testing.T) {
 	config.Providers = make(map[string]provider.HttpProvider)
 	config.Providers["mock_provider"] = mockProvider{}
 	server := Create(config, zerolog.Nop())
-	server.reverseProxy = func(rewrite Rewrite) httputil.ReverseProxy {
+	server.reverseProxy = func(rewrite rewriteRequest) httputil.ReverseProxy {
 		return httputil.ReverseProxy{
 			Transport: mockTransport{},
 			Rewrite:   rewrite,
 		}
 	}
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		forwardToHeader:      "http://somehost",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://proxyserver/test", withHeaders, t)
 	rw := httptest.NewRecorder()

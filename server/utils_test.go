@@ -15,7 +15,7 @@ func TestServerUtils_MakeHasuraError(t *testing.T) {
 		},
 	}
 	expectedResult, _ := json.Marshal(expectedResultMap)
-	actualResult := MakeHasuraError(mockErrorMessage)
+	actualResult := makeHasuraError(mockErrorMessage)
 	if string(expectedResult) != actualResult {
 		t.Fail()
 	}
@@ -35,7 +35,7 @@ func TestServerUtils_GetUrlWithSchemeAndHost(t *testing.T) {
 	for k, v := range testCases {
 		expectedResult := v
 		input, _ := url.Parse(k)
-		actualResultParsed := GetUrlWithSchemeAndHost(input)
+		actualResultParsed := getUrlWithSchemeAndHost(input)
 		actualResult := actualResultParsed.String()
 		if actualResult != expectedResult {
 			t.Fatalf("Test case %s: expected %s but received %s", k, expectedResult, actualResult)
@@ -65,13 +65,13 @@ func TestServerUtils_ParseUrl(t *testing.T) {
 		":",
 	}
 	for _, v := range validUrls {
-		_, err := ParseUrl(v)
+		_, err := parseUrl(v)
 		if err != nil {
 			t.Fatalf("For url %s: Expected error to be nil", v)
 		}
 	}
 	for _, v := range invalidUrls {
-		_, err := ParseUrl(v)
+		_, err := parseUrl(v)
 		if err == nil {
 			t.Fatalf("For url %s: Expected an error since url is invalid", v)
 		}

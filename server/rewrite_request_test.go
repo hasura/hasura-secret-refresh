@@ -65,7 +65,7 @@ func TestGetRewriteDetails_WithMissingRequestConfig(t *testing.T) {
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
+	_, _, _, _, ok := getRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
 	if ok != false {
 		t.Errorf("Expected 'ok' to be false")
 	}
@@ -76,17 +76,17 @@ func TestGetRewriteDetails_WithMissingRequestConfig(t *testing.T) {
 
 func TestGetRewriteDetails_WithInvalidUrl(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "invalid_url",
+		forwardToHeader:      "invalid_url",
 		"X-Hasura-Secret-Id": "some_secret",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
+	_, _, _, _, ok := getRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
 	if ok != false {
 		t.Errorf("Expected 'ok' to be false")
 	}
@@ -97,17 +97,17 @@ func TestGetRewriteDetails_WithInvalidUrl(t *testing.T) {
 
 func TestGetRewriteDetails_WithInvalidProvider(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "some_secret",
-		SecretProviderHeader: "mock_provider_random",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider_random",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
+	_, _, _, _, ok := getRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
 	if ok != false {
 		t.Errorf("Expected 'ok' to be false")
 	}
@@ -118,17 +118,17 @@ func TestGetRewriteDetails_WithInvalidProvider(t *testing.T) {
 
 func TestGetRewriteDetails_WithInvalidSecret(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "make_error",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
+	_, _, _, _, ok := getRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
 	if ok != false {
 		t.Errorf("Expected 'ok' to be false")
 	}
@@ -139,16 +139,16 @@ func TestGetRewriteDetails_WithInvalidSecret(t *testing.T) {
 
 func TestGetRewriteDetails_WithMissingProviderConfig(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		forwardToHeader:      "http://somehost",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
+	_, _, _, _, ok := getRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
 	if ok != false {
 		t.Errorf("Expected 'ok' to be false")
 	}
@@ -159,17 +159,17 @@ func TestGetRewriteDetails_WithMissingProviderConfig(t *testing.T) {
 
 func TestGetRewriteDetails_WithInvalidHeaderTemplate(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "secret123",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	_, _, _, _, ok := GetRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
+	_, _, _, _, ok := getRequestRewriteDetails(rw, mockRequest, providers, zerolog.Nop())
 	if ok != false {
 		t.Errorf("Expected 'ok' to be false")
 	}
@@ -180,17 +180,17 @@ func TestGetRewriteDetails_WithInvalidHeaderTemplate(t *testing.T) {
 
 func TestGetRewriteDetails_SuccessfulRequest(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "secret123",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockRequest := getMockRequest("http://somehost", withHeaders, t)
 	rw := httptest.NewRecorder()
 	providers := map[string]provider.HttpProvider{
 		"mock_provider": mockProvider{},
 	}
-	url, headerKey, headerVal, _, ok := GetRequestRewriteDetails(rw,
+	url, headerKey, headerVal, _, ok := getRequestRewriteDetails(rw,
 		mockRequest, providers, zerolog.Nop())
 	if ok != true {
 		t.Errorf("Expected 'ok' to be true")
@@ -198,8 +198,8 @@ func TestGetRewriteDetails_SuccessfulRequest(t *testing.T) {
 	if rw.Code != http.StatusOK {
 		t.Errorf("Expected status code to be %d but got %d", http.StatusOK, rw.Code)
 	}
-	if url.String() != withHeaders[ForwardToHeader] {
-		t.Errorf("Expected url to be %s but got %s", withHeaders[ForwardToHeader], url.String())
+	if url.String() != withHeaders[forwardToHeader] {
+		t.Errorf("Expected url to be %s but got %s", withHeaders[forwardToHeader], url.String())
 	}
 	if headerKey != "Auth" {
 		t.Errorf("Expected header name to be 'Auth' but got %s", headerKey)
@@ -211,10 +211,10 @@ func TestGetRewriteDetails_SuccessfulRequest(t *testing.T) {
 
 func TestRequestRewriter_HeadersAreRemoved(t *testing.T) {
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "secret123",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockHeaderKey, mockHeaderVal := "Auth", "Bearer topsecretval"
 	mockUrl, _ := url.Parse("http://localhost:8080")
@@ -227,7 +227,7 @@ func TestRequestRewriter_HeadersAreRemoved(t *testing.T) {
 	providerDeleteHeaders := func(header *http.Header) {
 		header.Del("X-Hasura-Secret-Id")
 	}
-	rewriter := GetRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders, zerolog.Nop())
+	rewriter := getRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders, zerolog.Nop())
 	rewriter(&proxyRequest)
 	numOutHeaders := len(proxyRequest.Out.Header)
 	if numOutHeaders != numInHeaders-3 {
@@ -264,10 +264,10 @@ func TestRequestRewriter_OutGoingUrl(t *testing.T) {
 		{"http://localhost:8080/path?query=test", "http://somehost:8090", "http://somehost:8090/path?query=test"},
 	}
 	withHeaders := map[string]string{
-		ForwardToHeader:      "http://somehost",
+		forwardToHeader:      "http://somehost",
 		"X-Hasura-Secret-Id": "secret123",
-		SecretProviderHeader: "mock_provider",
-		TemplateHeader:       "Auth: Bearer ##secret##",
+		secretProviderHeader: "mock_provider",
+		templateHeader:       "Auth: Bearer ##secret##",
 	}
 	mockHeaderKey, mockHeaderVal := "Auth", "Bearer topsecretval"
 	providerDeleteHeaders := func(header *http.Header) {
@@ -280,7 +280,7 @@ func TestRequestRewriter_OutGoingUrl(t *testing.T) {
 			In:  mockRequest,
 			Out: mockRequest,
 		}
-		rewriter := GetRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders, zerolog.Nop())
+		rewriter := getRequestRewriter(mockUrl, mockHeaderKey, mockHeaderVal, providerDeleteHeaders, zerolog.Nop())
 		rewriter(&proxyRequest)
 		if proxyRequest.Out.URL.String() != v.outgoingUrl {
 			t.Errorf("Expected URL to be %s but it was %s", v.outgoingUrl, proxyRequest.Out.URL.String())

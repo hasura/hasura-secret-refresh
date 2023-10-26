@@ -16,15 +16,15 @@ type AwsSecretsManager struct {
 }
 
 const (
-	CacheTtl = "cache_ttl"
+	cacheTtl = "cache_ttl"
 )
 
 const (
-	DefaultCacheTtl = time.Minute * 5
+	defaultCacheTtl = time.Minute * 5
 )
 
 const (
-	SecretIdHeader = "X-Hasura-Secret-Id"
+	secretIdHeader = "X-Hasura-Secret-Id"
 )
 
 var (
@@ -33,10 +33,10 @@ var (
 )
 
 func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSecretsManager, error) {
-	cacheTtl_, ok := config[CacheTtl]
+	cacheTtl_, ok := config[cacheTtl]
 	var cacheTtl time.Duration
 	if !ok {
-		cacheTtl = DefaultCacheTtl
+		cacheTtl = defaultCacheTtl
 	} else {
 		cacheTtlI, ok := cacheTtl_.(int)
 		if !ok {
@@ -63,13 +63,13 @@ func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSecretsMa
 }
 
 func (provider AwsSecretsManager) DeleteConfigHeaders(headers *http.Header) {
-	headers.Del(SecretIdHeader)
+	headers.Del(secretIdHeader)
 }
 
 func (provider AwsSecretsManager) SecretFetcher(headers http.Header) (provider.SecretFetcher, error) {
-	secretId := headers.Get(SecretIdHeader)
+	secretId := headers.Get(secretIdHeader)
 	if secretId != "" {
-		return secretFetcher{}, fmt.Errorf("%s: %s", HeaderNotFound, SecretIdHeader)
+		return secretFetcher{}, fmt.Errorf("%s: %s", HeaderNotFound, secretIdHeader)
 	}
 	return secretFetcher{
 		AwsSecretsManager: &provider,

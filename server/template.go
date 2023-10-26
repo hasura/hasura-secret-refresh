@@ -9,7 +9,7 @@ import (
 
 var regex = regexp.MustCompile("##(.*?)##")
 
-func GetHeaderFromTemplate(
+func getHeaderFromTemplate(
 	headerTemplate string, substituteWith string,
 ) (
 	headerKey string, headerVal string, err error,
