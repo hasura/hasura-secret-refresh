@@ -74,17 +74,17 @@ func getRequestConfig(
 	missingHeaders := make([]string, 0, 0)
 	forwardTo := r.Header.Get(forwardToHeader)
 	if forwardTo == "" {
-		missingHeaders = append(missingHeaders, forwardTo)
+		missingHeaders = append(missingHeaders, forwardToHeader)
 	}
 	requestConfig.destinationUrl = forwardTo
 	provider := r.Header.Get(secretProviderHeader)
 	if provider == "" {
-		missingHeaders = append(missingHeaders, provider)
+		missingHeaders = append(missingHeaders, secretProviderHeader)
 	}
 	requestConfig.secretProvider = provider
 	template := r.Header.Get(templateHeader)
 	if template == "" {
-		missingHeaders = append(missingHeaders, template)
+		missingHeaders = append(missingHeaders, templateHeader)
 	}
 	requestConfig.headerTemplate = template
 	if len(missingHeaders) != 0 {
