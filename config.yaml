@@ -15,6 +15,20 @@ awssm_oauth:
   http_retry_min_wait: 3
   http_retry_max_wait: 10
 
+awssm_oauth2:
+  type: "awssm_oauth"
+  certificate_cache_ttl: 200
+  certificate_region: "us-east-2"
+  token_cache_ttl: 200
+  token_cache_size: 20
+  oauth_url: "http://localhost:8090"
+  jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
+  jwt_duration: 200
+  http_retry_attempts: 2
+  http_retry_min_wait: 2
+  http_retry_max_wait: 8
+
+
 aws_secrets_manager_file:
   type: "aws_secrets_manager_file"
   region: "us-east-2"
