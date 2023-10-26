@@ -83,6 +83,10 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 }
 
 func (provider AwsSecretsManagerFile) Start() {
+	err := os.WriteFile(provider.filePath, []byte(""), 0777)
+	if err != nil {
+		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing to file %s", provider.filePath)
+	}
 	for {
 		provider.logger.Info().Msgf("aws_secrets_manager_file: Fetching secret %s", provider.secretId)
 		res, err := provider.secretsManager.GetSecretValue(
