@@ -105,9 +105,10 @@ func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSmOauth, 
 	smClient := secretsmanager.New(sess, aws.NewConfig().
 		WithRegion(configJson.CertificateRegion).
 		WithHTTPClient(httpClient.StandardClient()))
+	certificateCacheTtl := time.Duration(configJson.CertificateCacheTtl) * time.Second
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
-			c.CacheConfig.CacheItemTTL = configJson.CertificateCacheTtl * int64(time.Nanosecond)
+			c.CacheConfig.CacheItemTTL = certificateCacheTtl.Nanoseconds()
 		},
 		func(c *secretcache.Cache) {
 			c.Client = smClient
