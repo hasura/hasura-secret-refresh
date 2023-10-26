@@ -47,8 +47,7 @@ spec:
           volumeMounts:
             - name: shared-secret-volume
               mountPath: /secret
-#        - image: hasuraci/secrets-management-proxy:v2.33.0-beta.1
-        - image: varundey/test-repo:amd64
+        - image: hasuraci/secrets-management-proxy:v2.33.0-beta.1
           name: secrets-management-proxy
           imagePullPolicy: Always
           ports:
