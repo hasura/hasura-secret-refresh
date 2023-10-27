@@ -1,11 +1,12 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/hasura/hasura-secret-refresh/template"
 )
 
 var regex = regexp.MustCompile("##(.*?)##")
@@ -23,31 +24,7 @@ func getHeaderFromTemplate(
 	headerKey = strings.TrimSpace(headerKey)
 	headerValTemplate := split[1]
 	headerValTemplate = strings.TrimSpace(headerValTemplate)
-	headerVal = regex.ReplaceAllStringFunc(headerValTemplate, func(s string) string {
-		s = strings.TrimSpace(s)
-		s = strings.TrimLeft(s, "##")
-		s = strings.TrimRight(s, "##")
-		res := jsonTemplate(s, substituteWith)
-		return res
-	})
+	templ := template.Template(headerValTemplate)
+	headerVal = templ.Substitute(substituteWith)
 	return
-}
-
-func jsonTemplate(jsonTemplate, substituteWith string) string {
-	jsonPath := strings.Split(jsonTemplate, ".")
-	if len(jsonPath) < 2 {
-		return substituteWith
-	}
-	jsonParsed := make(map[string]string)
-	err := json.Unmarshal([]byte(substituteWith), &jsonParsed)
-	if err != nil {
-		return ""
-	}
-	jsonKey := strings.TrimSpace(jsonPath[1])
-	val, ok := jsonParsed[jsonKey]
-	if !ok {
-		return ""
-	}
-	val = strings.TrimSpace(val)
-	return val
 }
