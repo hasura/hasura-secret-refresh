@@ -86,8 +86,6 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 		if k == "log_config" {
 			continue
 		}
-		var provider_ provider.HttpProvider
-		var fProvider_ provider.FileProvider
 		providerData, ok := v.(map[string]interface{})
 		if !ok {
 			logger.Error().Msgf("Failed to convert config to required type")
@@ -105,18 +103,23 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 		}
 		sublogger := logger.With().Str("provider_name", k).Str("provider_type", providerType).Logger()
 		if providerType == aws_secrets_manager {
+			var provider_ provider.HttpProvider
 			provider_, err = awsSm.Create(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
+			config.Providers[k] = provider_
 		} else if providerType == aws_sm_oauth {
+			var provider_ provider.HttpProvider
 			provider_, err = awsSmOauth.Create(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
+			config.Providers[k] = provider_
 		} else if providerType == aws_sm_file {
+			var fProvider_ provider.FileProvider
 			fProvider_, err = awsSm.CreateAwsSecretsManagerFile(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
@@ -128,7 +131,6 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 			logger.Err(err).Msgf("Error in config")
 			return
 		}
-		config.Providers[k] = provider_
 	}
 	return
 }
