@@ -20,9 +20,9 @@ const (
 )
 
 const (
-	aws_secrets_manager = "aws_secrets_manager"
-	aws_sm_oauth        = "awssm_oauth"
-	aws_sm_file         = "aws_secrets_manager_file"
+	aws_secrets_manager = "proxy_aws_secrets_manager"
+	aws_sm_oauth        = "proxy_awssm_oauth"
+	aws_sm_file         = "file_aws_secrets_manager"
 )
 
 func main() {

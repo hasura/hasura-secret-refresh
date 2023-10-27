@@ -1,9 +1,9 @@
 aws_secrets_manager:
-  type: "aws_secrets_manager"
+  type: "proxy_aws_secrets_manager"
   cache_ttl: 300
 
 awssm_oauth:
-  type: "awssm_oauth"
+  type: "proxy_awssm_oauth"
   certificate_cache_ttl: 300
   certificate_region: "us-east-2"
   token_cache_ttl: 300
@@ -16,7 +16,7 @@ awssm_oauth:
   http_retry_max_wait: 10
 
 awssm_oauth2:
-  type: "awssm_oauth"
+  type: "proxy_awssm_oauth"
   certificate_cache_ttl: 200
   certificate_region: "us-east-2"
   token_cache_ttl: 200
@@ -30,14 +30,14 @@ awssm_oauth2:
 
 
 aws_secrets_manager_file:
-  type: "aws_secrets_manager_file"
+  type: "file_aws_secrets_manager"
   region: "us-east-2"
   refresh: 300
   secret_id: testSecret
   path: ./testsecret
 
 aws_secrets_manager_file_json:
-  type: "aws_secrets_manager_file"
+  type: "file_aws_secrets_manager"
   region: "us-east-2"
   refresh: 300
   secret_id: testJsonSecret
