@@ -36,5 +36,13 @@ aws_secrets_manager_file:
   secret_id: testSecret
   path: ./testsecret
 
+aws_secrets_manager_file_json:
+  type: "aws_secrets_manager_file"
+  region: "us-east-2"
+  refresh: 300
+  secret_id: testJsonSecret
+  path: ./testsecretJson
+  template: postgres://##secret.username##:##secret.password##@##secret.host##:##secret.port##/dbname
+
 log_config:
   level: "info"
