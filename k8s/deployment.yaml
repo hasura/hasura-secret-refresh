@@ -1,31 +1,63 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: secrets-management-proxy
+  labels:
+    app: hasura
+    hasuraService: custom
+  name: hasura
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hasura-secrets-management-proxy
+      app: hasura
   template:
     metadata:
       labels:
-        app: hasura-secrets-management-proxy
+        app: hasura
     spec:
-      serviceAccountName: hasura-secrets-management-proxy-service-account
+      serviceAccountName: secrets-management-proxy-service-account
       containers:
-        - name: secrets-management-proxy
-          image: varundey/test-repo:amd64
+        - image: hasura/graphql-engine:v2.34.0
+          imagePullPolicy: IfNotPresent
+          name: hasura
+          env:
+            - name: HASURA_GRAPHQL_DATABASE_URL
+              value: postgres://varundey:QNdZvx5pjkm0@ep-green-grass-53378116.us-west-2.aws.neon.tech/neondb
+            - name: HASURA_GRAPHQL_ADMIN_SECRET
+              value: mysecretkey
+            ## enable the console served by server
+            - name: HASURA_GRAPHQL_ENABLE_CONSOLE
+              value: "true"
+            ## enable debugging mode. It is recommended to disable this in production
+            - name: HASURA_GRAPHQL_DEV_MODE
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources: {}
+          volumeMounts:
+            - name: shared-secret-volume
+              mountPath: /secret
+        - image: hasuraci/secrets-management-proxy:v2.33.0-beta.1
+          name: secrets-management-proxy
           imagePullPolicy: Always
+          ports:
+            - containerPort: 5353
           volumeMounts:
             - name: secrets-management-proxy-configmap
               mountPath: /config.yaml
               subPath: config.yaml
-          ports:
-            - containerPort: 8080
-          env:
-            - name: AWS_REGION
-              value: "us-west-2"
+            - name: shared-secret-volume
+              mountPath: /secret
       volumes:
         - name: secrets-management-proxy-configmap
           configMap:
@@ -33,3 +65,5 @@ spec:
             items:
               - key: config.yaml
                 path: config.yaml
+        - name: shared-secret-volume
+          emptyDir: { }
