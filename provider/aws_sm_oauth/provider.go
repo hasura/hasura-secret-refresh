@@ -49,9 +49,9 @@ var (
 )
 
 const (
-	CertificateSecretIdHeader = "X-Hasura-Certificate-Id"
-	OauthClientIdHeader       = "X-Hasura-Oauth-Client-Id"
-	BackendApiIdHeader        = "X-Hasura-Backend-Id"
+	certificateSecretIdHeader = "X-Hasura-Certificate-Id"
+	oauthClientIdHeader       = "X-Hasura-Oauth-Client-Id"
+	backendApiIdHeader        = "X-Hasura-Backend-Id"
 )
 
 func (provider AwsSmOauth) SecretFetcher(headers http.Header) (provider.SecretFetcher, error) {
@@ -59,19 +59,19 @@ func (provider AwsSmOauth) SecretFetcher(headers http.Header) (provider.SecretFe
 		AwsSmOauth: &provider,
 	}
 	notFoundHeaders := make([]string, 0, 0)
-	certificateSecretId := headers.Get(CertificateSecretIdHeader)
+	certificateSecretId := headers.Get(certificateSecretIdHeader)
 	if certificateSecretId == "" {
-		notFoundHeaders = append(notFoundHeaders, CertificateSecretIdHeader)
+		notFoundHeaders = append(notFoundHeaders, certificateSecretIdHeader)
 	}
 	secretFetcher.certificateSecretId = certificateSecretId
-	oauthClientId := headers.Get(OauthClientIdHeader)
+	oauthClientId := headers.Get(oauthClientIdHeader)
 	if oauthClientId == "" {
-		notFoundHeaders = append(notFoundHeaders, OauthClientIdHeader)
+		notFoundHeaders = append(notFoundHeaders, oauthClientIdHeader)
 	}
 	secretFetcher.oAuthClientId = oauthClientId
-	backendApiId := headers.Get(BackendApiIdHeader)
+	backendApiId := headers.Get(backendApiIdHeader)
 	if backendApiId == "" {
-		notFoundHeaders = append(notFoundHeaders, BackendApiIdHeader)
+		notFoundHeaders = append(notFoundHeaders, backendApiIdHeader)
 	}
 	secretFetcher.backendApiId = backendApiId
 	notFoundHeadersStr := strings.Join(notFoundHeaders, ", ")
@@ -82,9 +82,9 @@ func (provider AwsSmOauth) SecretFetcher(headers http.Header) (provider.SecretFe
 }
 
 func (provider AwsSmOauth) DeleteConfigHeaders(headers *http.Header) {
-	headers.Del(CertificateSecretIdHeader)
-	headers.Del(OauthClientIdHeader)
-	headers.Del(BackendApiIdHeader)
+	headers.Del(certificateSecretIdHeader)
+	headers.Del(oauthClientIdHeader)
+	headers.Del(backendApiIdHeader)
 }
 
 func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSmOauth, error) {
@@ -105,9 +105,10 @@ func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSmOauth, 
 	smClient := secretsmanager.New(sess, aws.NewConfig().
 		WithRegion(configJson.CertificateRegion).
 		WithHTTPClient(httpClient.StandardClient()))
+	certificateCacheTtl := time.Duration(configJson.CertificateCacheTtl) * time.Second
 	awsSecretsManagerCache, err := secretcache.New(
 		func(c *secretcache.Cache) {
-			c.CacheConfig.CacheItemTTL = configJson.CertificateCacheTtl * int64(time.Nanosecond)
+			c.CacheConfig.CacheItemTTL = certificateCacheTtl.Nanoseconds()
 		},
 		func(c *secretcache.Cache) {
 			c.Client = smClient

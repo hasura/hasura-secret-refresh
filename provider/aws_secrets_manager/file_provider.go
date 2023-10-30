@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/hasura/hasura-secret-refresh/template"
 	"github.com/rs/zerolog"
 )
 
@@ -16,6 +17,7 @@ type AwsSecretsManagerFile struct {
 	secretsManager  *secretsmanager.SecretsManager
 	filePath        string
 	secretId        string
+	template        string
 	logger          zerolog.Logger
 }
 
@@ -67,12 +69,22 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 	refreshInterval := time.Duration(refreshIntervalInt) * time.Second
 	smClient := secretsmanager.New(sess, aws.NewConfig().
 		WithRegion(region))
+	secretTemplate := ""
+	secretTemplateI, ok := config["template"]
+	if ok {
+		secretTemplate, ok = secretTemplateI.(string)
+		if !ok {
+			logger.Error().Msg("aws_secrets_manager_file: 'template' must be a string")
+			return AwsSecretsManagerFile{}, fmt.Errorf("config not valid")
+		}
+	}
 	awsSm := AwsSecretsManagerFile{
 		refreshInterval: refreshInterval,
 		filePath:        filePath,
 		secretsManager:  smClient,
 		secretId:        secretId,
 		logger:          logger,
+		template:        secretTemplate,
 	}
 	logger.Info().
 		Str("refresh", refreshInterval.String()).
@@ -83,6 +95,10 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 }
 
 func (provider AwsSecretsManagerFile) Start() {
+	err := os.WriteFile(provider.filePath, []byte(""), 0777)
+	if err != nil {
+		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing to file %s", provider.filePath)
+	}
 	for {
 		provider.logger.Info().Msgf("aws_secrets_manager_file: Fetching secret %s", provider.secretId)
 		res, err := provider.secretsManager.GetSecretValue(
@@ -93,8 +109,12 @@ func (provider AwsSecretsManagerFile) Start() {
 		if err != nil {
 			provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while retrieving secret '%s' from aws secrets manager", provider.secretId)
 		} else {
-			secretString := res.SecretString
-			err = os.WriteFile(provider.filePath, []byte(*secretString), 0777)
+			secretString := *res.SecretString
+			if provider.template != "" {
+				templ := template.Template(provider.template)
+				secretString = templ.Substitute(secretString)
+			}
+			err = os.WriteFile(provider.filePath, []byte(secretString), 0777)
 			if err != nil {
 				provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
 			}

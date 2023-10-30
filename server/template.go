@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/hasura/hasura-secret-refresh/template"
 )
 
 var regex = regexp.MustCompile("##(.*?)##")
 
-func GetHeaderFromTemplate(
+func getHeaderFromTemplate(
 	headerTemplate string, substituteWith string,
 ) (
 	headerKey string, headerVal string, err error,
@@ -22,8 +24,7 @@ func GetHeaderFromTemplate(
 	headerKey = strings.TrimSpace(headerKey)
 	headerValTemplate := split[1]
 	headerValTemplate = strings.TrimSpace(headerValTemplate)
-	headerVal = regex.ReplaceAllStringFunc(headerValTemplate, func(s string) string {
-		return substituteWith
-	})
+	templ := template.Template(headerValTemplate)
+	headerVal = templ.Substitute(substituteWith)
 	return
 }

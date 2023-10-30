@@ -4,20 +4,48 @@ metadata:
   name: secrets-management-proxy
 data:
   config.yaml: |
-    environment: prod
-
-    aws_secrets_manager:
-      cache_ttl: 300
 
     awssm_oauth:
+      type: "proxy_awssm_oauth"
       certificate_cache_ttl: 300
-      certificate_secret_id: "jpmc-test-certificate"
+      certificate_region: "us-west-2"
       token_cache_ttl: 300
       token_cache_size: 10
       oauth_url: "https://0vmhwbsxti.execute-api.us-east-2.amazonaws.com/prod/oauth"
-      oauth_client_id: "sample_client_id"
       jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
       jwt_duration: 300
-    
+      http_retry_attempts: 3
+      http_retry_min_wait: 3
+      http_retry_max_wait: 10
+      
+    awssm_oauth2:
+      type: "proxy_awssm_oauth"
+      certificate_cache_ttl: 200
+      certificate_region: "us-west-2"
+      token_cache_ttl: 200
+      token_cache_size: 20
+      oauth_url: "https://0vmhwbsxti.execute-api.us-east-2.amazonaws.com/prod/oauth"
+      jwt_claims_map: '{"iss":"sample_issuer", "sub":"sample_sub", "aud":"sample_aud"}'
+      jwt_duration: 200
+      http_retry_attempts: 2
+      http_retry_min_wait: 2
+      http_retry_max_wait: 8
+      
+    aws_secrets_manager_file:
+      type: "file_aws_secrets_manager"
+      region: "us-west-2"
+      refresh: 300
+      secret_id: plain_text_secret
+      path: /secret/testsecret.txt
+        
+    aws_secrets_manager_file_json:
+      type: "file_aws_secrets_manager"
+      region: "us-west-2"
+      refresh: 300
+      secret_id: json_secret
+      path: /secret/dbsecret.txt
+      template: postgres://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+      
+      
     log_config:
       level: "info"

@@ -13,7 +13,7 @@ func TestOauth_OauthRequest(t *testing.T) {
 	mockSecretId := "mock_secret_id"
 	mockOauthClientId := "mock_oauth_client_id"
 	mockOAuthUrl, _ := url.Parse("http://oauth.com/token")
-	oAuthMethod, oAuthFormData, oAuthHeader := GetOauthRequest(mockJwtToken, mockSecretId, mockOauthClientId, mockOAuthUrl)
+	oAuthMethod, oAuthFormData, oAuthHeader := getOauthRequest(mockJwtToken, mockSecretId, mockOauthClientId, mockOAuthUrl)
 	if oAuthMethod != http.MethodPost {
 		t.Errorf("Expected method to be %s but got %s", http.MethodPost, http.MethodGet)
 	}
@@ -67,7 +67,7 @@ func TestOauth_GetAccessToken(t *testing.T) {
 	}
 	json.NewEncoder(mockResponse).Encode(jsonBody)
 	response := mockResponse.Result()
-	token, err := GetAccessTokenFromResponse(response)
+	token, err := getAccessTokenFromResponse(response)
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -81,7 +81,7 @@ func TestOauth_GetAccessTokenInvalidResponse(t *testing.T) {
 	mockResponse.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(mockResponse).Encode("")
 	invalidJsonResponse := mockResponse.Result()
-	_, err := GetAccessTokenFromResponse(invalidJsonResponse)
+	_, err := getAccessTokenFromResponse(invalidJsonResponse)
 	if err == nil {
 		t.Fatalf("Expected error because the body was an invalid json")
 	}
@@ -95,7 +95,7 @@ func TestOauth_GetAccessTokenInvalidResponse(t *testing.T) {
 	}
 	json.NewEncoder(mockResponse).Encode(jsonBody)
 	invalidTypeResponse := mockResponse.Result()
-	_, err = GetAccessTokenFromResponse(invalidTypeResponse)
+	_, err = getAccessTokenFromResponse(invalidTypeResponse)
 	if err == nil {
 		t.Fatalf("Expected error because the type of token was invalid")
 	}

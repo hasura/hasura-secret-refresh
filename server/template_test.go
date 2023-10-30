@@ -38,16 +38,72 @@ var testCases = []testCase{
 		expectedHeaderVal: "",
 		expectedIsErr:     true,
 	},
+	{
+		name:              "template with 2 secrets",
+		template:          "Authorization: Bearer ##secret1## ##secret1##",
+		substituteWith:    "some_secret",
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer some_secret some_secret",
+		expectedIsErr:     false,
+	},
+	{
+		name:              "json template simple",
+		template:          "Authorization: Bearer ##secret1.key##",
+		substituteWith:    `{"key": "some_secret"}`,
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer some_secret",
+		expectedIsErr:     false,
+	},
+	{
+		name:              "json template complex",
+		template:          "Authorization: Bearer ##secret1.key## ##secret1.key2##",
+		substituteWith:    `{"key": "some_secret", "key2": "2"}`,
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer some_secret 2",
+		expectedIsErr:     false,
+	},
+	{
+		name:              "invalid json",
+		template:          "Authorization: Bearer ##secret1.key## ##secret1.key2##",
+		substituteWith:    `{"key": "some_secret", "key2": 2}`,
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer  ",
+		expectedIsErr:     false,
+	},
+	{
+		name:              "key not found",
+		template:          "Authorization: Bearer ##secret1.key## ##secret1.key2##",
+		substituteWith:    `{"key": "some_secret"}`,
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer some_secret ",
+		expectedIsErr:     false,
+	},
+	{
+		name:              "key not found 2",
+		template:          "Authorization: Bearer ##secret1.key## ##secret1.key2##",
+		substituteWith:    `{"key2": "2"}`,
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer  2",
+		expectedIsErr:     false,
+	},
+	{
+		name:              "nested json",
+		template:          "Authorization: Bearer ##secret1.key##",
+		substituteWith:    `{"key": {"key": "some_secret"}}`,
+		expectedHeaderKey: "Authorization",
+		expectedHeaderVal: "Bearer ",
+		expectedIsErr:     false,
+	},
 }
 
 func TestTemplate_GetKeysFromTemplates(t *testing.T) {
 	for _, testCase := range testCases {
-		headerKey, headerVal, err := GetHeaderFromTemplate(testCase.template, testCase.substituteWith)
+		headerKey, headerVal, err := getHeaderFromTemplate(testCase.template, testCase.substituteWith)
 		if testCase.expectedIsErr && err == nil {
 			t.Errorf("Expected error in test %s but got no error", testCase.name)
 		}
-		if testCase.expectedIsErr {
-			return
+		if testCase.expectedIsErr && err != nil {
+			continue
 		}
 		if testCase.expectedHeaderKey != headerKey {
 			t.Errorf("Expected %s as header key but got %s", testCase.expectedHeaderKey, headerKey)
