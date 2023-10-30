@@ -5,12 +5,8 @@ metadata:
 data:
   config.yaml: |
 
-    aws_secrets_manager:
-      type: "aws_secrets_manager"
-      cache_ttl: 300
-
     awssm_oauth:
-      type: "awssm_oauth"
+      type: "proxy_awssm_oauth"
       certificate_cache_ttl: 300
       certificate_region: "us-west-2"
       token_cache_ttl: 300
@@ -23,7 +19,7 @@ data:
       http_retry_max_wait: 10
       
     awssm_oauth2:
-      type: "awssm_oauth"
+      type: "proxy_awssm_oauth"
       certificate_cache_ttl: 200
       certificate_region: "us-west-2"
       token_cache_ttl: 200
@@ -36,11 +32,20 @@ data:
       http_retry_max_wait: 8
       
     aws_secrets_manager_file:
-      type: "aws_secrets_manager_file"
+      type: "file_aws_secrets_manager"
       region: "us-west-2"
       refresh: 300
-      secret_id: file_provider_secret
+      secret_id: plain_text_secret
       path: /secret/testsecret.txt
+        
+    aws_secrets_manager_file_json:
+      type: "file_aws_secrets_manager"
+      region: "us-west-2"
+      refresh: 300
+      secret_id: json_secret
+      path: /secret/dbsecret.txt
+      template: postgres://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+      
       
     log_config:
       level: "info"
