@@ -25,17 +25,21 @@ func (fetcher secretFetcher) FetchSecret() (string, error) {
 	if ok {
 		return cachedToken, nil
 	}
-	rsaPrivateKeyPemRaw, err := fetcher.awsSecretsManager.GetSecretString(fetcher.certificateSecretId)
+	jwtToken, err := fetcher.createJwtToken()
 	if err != nil {
-		return "", fmt.Errorf("%s: unable to retrieve certificate from aws secrets manager: %w", UnableToFetch, err)
+		return "", err
 	}
-	fetcher.logger.Debug().Str("aws_secret_id", fetcher.certificateSecretId).Str("aws_response", rsaPrivateKeyPemRaw).Msg("Response from aws secrets manager")
-	tokenString, err := createJwtToken(rsaPrivateKeyPemRaw, fetcher.jwtClaimMap, fetcher.jwtDuration, time.Now(), fetcher.oAuthClientId)
+	accessToken, err := fetcher.getAccessToken(jwtToken)
 	if err != nil {
-		return "", fmt.Errorf("%s: unable to create jwt token: %w", UnableToFetch, err)
+		return "", err
 	}
-	oAuthMethod, oAuthFormData, oAuthHeader := getOauthRequest(tokenString, fetcher.backendApiId, fetcher.oAuthClientId, &fetcher.oAuthUrl)
-	oAuthRequest, _ := retryablehttp.NewRequest(oAuthMethod, fetcher.oAuthUrl.String(), strings.NewReader(oAuthFormData.Encode()))
+	_ = fetcher.cache.Add(cacheKey, accessToken)
+	return accessToken, nil
+}
+
+func (fetcher secretFetcher) getAccessToken(jwtToken string) (string, error) {
+	oAuthMethod, oAuthFormData, oAuthHeader := getOauthRequest(jwtToken, fetcher.backendApiId, fetcher.oAuthClientId, &fetcher.oAuthUrl)
+	oAuthRequest, err := retryablehttp.NewRequest(oAuthMethod, fetcher.oAuthUrl.String(), strings.NewReader(oAuthFormData.Encode()))
 	oAuthRequest.Header = oAuthHeader
 	if err != nil {
 		return "", fmt.Errorf("%s: Unable to create oauth request: %w", UnableToFetch, err)
@@ -50,8 +54,20 @@ func (fetcher secretFetcher) FetchSecret() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: Unable to get access token from oauth response: %w", UnableToFetch, err)
 	}
-	_ = fetcher.cache.Add(cacheKey, accessToken)
 	return accessToken, nil
+}
+
+func (fetcher secretFetcher) createJwtToken() (string, error) {
+	rsaPrivateKeyPemRaw, err := fetcher.awsSecretsManager.GetSecretString(fetcher.certificateSecretId)
+	if err != nil {
+		return "", fmt.Errorf("%s: unable to retrieve certificate from aws secrets manager: %w", UnableToFetch, err)
+	}
+	fetcher.logger.Debug().Str("aws_secret_id", fetcher.certificateSecretId).Str("aws_response", rsaPrivateKeyPemRaw).Msg("Response from aws secrets manager")
+	tokenString, err := createJwtToken(rsaPrivateKeyPemRaw, fetcher.jwtClaimMap, fetcher.jwtDuration, time.Now(), fetcher.oAuthClientId)
+	if err != nil {
+		return "", fmt.Errorf("%s: unable to create jwt token: %w", UnableToFetch, err)
+	}
+	return tokenString, nil
 }
 
 func (fetcher secretFetcher) getCacheKey() string {
