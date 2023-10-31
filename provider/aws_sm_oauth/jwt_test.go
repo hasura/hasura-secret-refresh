@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 )
 
 const (
@@ -14,13 +15,12 @@ const (
 
 func TestJwt_TestJwtCreation(t *testing.T) {
 	mockClaims := map[string]interface{}{
-		"sub": "sub_claim",
 		"aud": "audience_claim",
 	}
 	fiveMins := time.Minute * 5
 	currentTime := time.Date(2023, time.January, int(time.Saturday), 0, 0, 0, 0, time.UTC)
 	fiveMinsLater := currentTime.Add(fiveMins)
-	token, err := createJwtToken(testRsaPrivateKeyPem, mockClaims, fiveMins, currentTime)
+	token, err := createJwtToken(testRsaPrivateKeyPem, mockClaims, fiveMins, currentTime, "mock_client_id")
 	if err != nil {
 		t.Fatalf("Jwt creation failed")
 	}
@@ -42,27 +42,58 @@ func TestJwt_TestJwtCreation(t *testing.T) {
 			fiveMinsLater.Unix(), int64(valFloat),
 		)
 	}
-	val, found = claimsMap["sub"]
-	if !found {
-		t.Fatalf("Claims 'sub' not found in token")
-	}
-	valStr := val.(string)
-	if valStr != "sub_claim" {
-		t.Fatalf("Expected to have value %s in claim 'sub' but received %s",
-			"sub_claim", valStr,
-		)
-	}
 	val, found = claimsMap["aud"]
 	if !found {
 		t.Fatalf("Claims 'aud' not found in token")
 	}
-	valStr = val.(string)
+	valStr := val.(string)
 	if valStr != "audience_claim" {
 		t.Fatalf("Expected to have value %s in claim 'aud' but received %s",
 			"sub_claim", valStr,
 		)
 	}
-	if len(claimsMap) != 3 {
+	val, found = claimsMap["iss"]
+	if !found {
+		t.Fatalf("Claims 'iss' not found in token")
+	}
+	valStr = val.(string)
+	if valStr != "mock_client_id" {
+		t.Fatalf("Expected to have value %s in claim 'iss' but received %s",
+			"mock_client_id", valStr,
+		)
+	}
+	val, found = claimsMap["jti"]
+	if !found {
+		t.Fatalf("Claims 'jti' not found in token")
+	}
+	valStr = val.(string)
+	_, err = uuid.Parse(valStr)
+	if err != nil {
+		t.Fatalf("Expected to have valid UUID in claim 'jti'. Parsing uuid resulted in error: %s",
+			err,
+		)
+	}
+	val, found = claimsMap["iat"]
+	if !found {
+		t.Fatalf("Claims 'iat' not found in token")
+	}
+	valFloat = val.(float64)
+	if int64(valFloat) != currentTime.Unix() {
+		t.Fatalf("Expected to have value %d in claim 'iat' but received %d",
+			currentTime.Unix(), int64(valFloat),
+		)
+	}
+	val, found = claimsMap["sub"]
+	if !found {
+		t.Fatalf("Claims 'sub' not found in token")
+	}
+	valStr = val.(string)
+	if valStr != "mock_client_id" {
+		t.Fatalf("Expected to have value %s in claim 'sub' but received %s",
+			"mock_client_id", valStr,
+		)
+	}
+	if len(claimsMap) != 6 {
 		t.Errorf("Unknown claims are present in the token")
 	}
 }
@@ -74,7 +105,7 @@ func TestJwt_TestJwtCreationFailure(t *testing.T) {
 	}
 	fiveMins := time.Minute * 5
 	currentTime := time.Date(2023, time.January, int(time.Saturday), 0, 0, 0, 0, time.UTC)
-	_, err := createJwtToken("invalid_rsa_key", mockClaims, fiveMins, currentTime)
+	_, err := createJwtToken("invalid_rsa_key", mockClaims, fiveMins, currentTime, "mock_client_id")
 	if err == nil {
 		t.Fatalf("Expected error because rsa key was invalid")
 	}

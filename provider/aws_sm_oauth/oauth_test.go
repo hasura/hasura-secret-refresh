@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/rs/zerolog"
 )
 
 func TestOauth_OauthRequest(t *testing.T) {
@@ -67,7 +69,7 @@ func TestOauth_GetAccessToken(t *testing.T) {
 	}
 	json.NewEncoder(mockResponse).Encode(jsonBody)
 	response := mockResponse.Result()
-	token, err := getAccessTokenFromResponse(response)
+	token, err := getAccessTokenFromResponse(response, zerolog.Nop())
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -81,7 +83,7 @@ func TestOauth_GetAccessTokenInvalidResponse(t *testing.T) {
 	mockResponse.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(mockResponse).Encode("")
 	invalidJsonResponse := mockResponse.Result()
-	_, err := getAccessTokenFromResponse(invalidJsonResponse)
+	_, err := getAccessTokenFromResponse(invalidJsonResponse, zerolog.Nop())
 	if err == nil {
 		t.Fatalf("Expected error because the body was an invalid json")
 	}
@@ -95,7 +97,7 @@ func TestOauth_GetAccessTokenInvalidResponse(t *testing.T) {
 	}
 	json.NewEncoder(mockResponse).Encode(jsonBody)
 	invalidTypeResponse := mockResponse.Result()
-	_, err = getAccessTokenFromResponse(invalidTypeResponse)
+	_, err = getAccessTokenFromResponse(invalidTypeResponse, zerolog.Nop())
 	if err == nil {
 		t.Fatalf("Expected error because the type of token was invalid")
 	}
