@@ -46,7 +46,7 @@ func (fetcher secretFetcher) FetchSecret() (string, error) {
 		return "", fmt.Errorf("%s: Unable perform oauth request: %w", UnableToFetch, err)
 	}
 	logOAuthResponse(response, "Response from oauth endpoint", fetcher.logger)
-	accessToken, err := getAccessTokenFromResponse(response)
+	accessToken, err := getAccessTokenFromResponse(response, fetcher.logger)
 	if err != nil {
 		return "", fmt.Errorf("%s: Unable to get access token from oauth response: %w", UnableToFetch, err)
 	}

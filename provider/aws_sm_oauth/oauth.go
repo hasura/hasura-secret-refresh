@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/rs/zerolog"
 )
 
 func getOauthRequest(jwtToken string, secretId string,
@@ -21,8 +24,21 @@ func getOauthRequest(jwtToken string, secretId string,
 	return
 }
 
-func getAccessTokenFromResponse(response *http.Response) (token string, err error) {
+func getAccessTokenFromResponse(response *http.Response, logger zerolog.Logger) (token string, err error) {
 	defer response.Body.Close()
+	if response.StatusCode != 200 {
+		httpBodyByte, err := io.ReadAll(response.Body)
+		if err != nil {
+			httpBody := string(httpBodyByte)
+			logger.Error().
+				Str("status", response.Status).
+				Str("body", httpBody).
+				Msgf("Did not receive 200 response from oauth server")
+		} else {
+			logger.Err(err).Msgf("Unable to decode response body from OAuth endpoint")
+		}
+		return "", fmt.Errorf("Did not receive 200 response from oauth server. Received: status code: %d", response.StatusCode)
+	}
 	responseJson := make(map[string]interface{})
 	err = json.NewDecoder(response.Body).Decode(&responseJson)
 	if err != nil {
