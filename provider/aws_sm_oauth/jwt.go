@@ -20,9 +20,6 @@ func createJwtToken(
 	jwtDuration := duration
 	currentJwtClaim := make(map[string]interface{})
 	jwtExp := currentTime.Add(jwtDuration).Unix()
-	for k, v := range claims {
-		currentJwtClaim[k] = v
-	}
 	currentJwtClaim["exp"] = jwtExp
 	currentJwtClaim["sub"] = clientId
 	currentJwtClaim["iss"] = clientId
@@ -32,6 +29,9 @@ func createJwtToken(
 	}
 	currentJwtClaim["jti"] = randomUuid
 	currentJwtClaim["iat"] = currentTime.Unix()
+	for k, v := range claims {
+		currentJwtClaim[k] = v
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(currentJwtClaim))
 	tokenString, err := token.SignedString(rsaPrivateKeyPem)
 	if err != nil {
