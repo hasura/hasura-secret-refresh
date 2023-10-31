@@ -3,8 +3,10 @@ module github.com/hasura/hasura-secret-refresh
 go 1.20
 
 require (
+	github.com/aws/aws-sdk-go v1.44.287
 	github.com/aws/aws-secretsmanager-caching-go v1.1.2
 	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hashicorp/golang-lru/v2 v2.0.6
 	github.com/rs/zerolog v1.30.0
@@ -12,7 +14,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go v1.44.287 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
