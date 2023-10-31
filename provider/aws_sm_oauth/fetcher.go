@@ -40,10 +40,10 @@ func (fetcher secretFetcher) FetchSecret() (string, error) {
 func (fetcher secretFetcher) getAccessToken(jwtToken string) (string, error) {
 	oAuthMethod, oAuthFormData, oAuthHeader := getOauthRequest(jwtToken, fetcher.backendApiId, fetcher.oAuthClientId, &fetcher.oAuthUrl)
 	oAuthRequest, err := retryablehttp.NewRequest(oAuthMethod, fetcher.oAuthUrl.String(), strings.NewReader(oAuthFormData.Encode()))
-	oAuthRequest.Header = oAuthHeader
 	if err != nil {
 		return "", fmt.Errorf("%s: Unable to create oauth request: %w", UnableToFetch, err)
 	}
+	oAuthRequest.Header = oAuthHeader
 	logOauthRequest(fetcher.oAuthUrl, oAuthMethod, oAuthFormData, oAuthHeader, "Sending request to oauth endpoint", fetcher.logger)
 	response, err := fetcher.httpClient.Do(oAuthRequest)
 	if err != nil {
