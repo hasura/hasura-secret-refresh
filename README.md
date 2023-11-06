@@ -244,7 +244,7 @@ Requests to AWS Secrets Manager and to the OAuth endpoint are retried on recover
 For the type file_aws_secrets_manager, secrets manager proxy service will try to fetch the credentials from AWS Secrets manager and will write to a file which is mounted on a shared volume between Hasura Data Plane and the Secrets proxy. This is to be used for AWS Secrets Manager based integration with Data Sources. The configuration parameters are:
 * `type`: Must always be "file_aws_secrets_manager"
 * `region`: AWS region where the secret is hosted on the secrets manager
-* `refresh`: Refresh interval after which secrets management service should refetch the secret.
+* `refresh`: Refresh interval after which secrets management service should refetch the secret. E.g. 60 (seconds)
 * `secret_id`: The identifier with which the secret is stored on AWS Secret Management. Note: This can be the ASE Secret ID, or the full ARN string for the secret.
 * `path`: The file path where to which the secret will be stored. **Note**: The path should match the path specified in the shared volume mount. The filename should match the expected SECRET name by Hasura.
 * `template`: The template of the secret which would be replaced by specific variables before writing to file. This field is optional if the raw secret value from AWS Secrets Manager needs to be used.
@@ -258,9 +258,9 @@ Hence, the final secret that is written on the shared file will be `jdbc://db_us
 
 #### Secret Rotation
 The provider `file_aws_secrets_manager` works in conjunction with the new feature of Dynamic Secrets From File, in Hasura. If the credentials are changed in the AWS Secrets Manager, following behavior is expected:
-* The refresh parameter will make sure that max within the <refresh> time, the secret is re-fetched and updated in the local cache. Generally we recommend setting a refresh time of 300 sec (5 mins) to optimize for the cost of AWS API requests.
-* When Hasura encounters an Auth error with a downstream database (due to old credentials), Hasura will re-read the credentials from the shared secret file and retry the request.
-* However due to the refresh time set at Secrets Proxy, worst case scenario, the request to the database may fail for the entire period (e.g. 300 secs) until the Secrets Proxy schedules the next refresh.
+* The refresh parameter will make sure that max within the `<refresh>` time, the secret is re-fetched and updated in the local cache.
+* When Hasura encounters an Auth error with a downstream database (say, due to old credentials), Hasura will re-read the credentials from the shared secret file and retry the request. If Secrets Proxy has already updated the secret as per the refresh policy, Hasura will pick up the new credential and retry the request.
+* Since Secrets Proxy, has a refresh interval, the new secret pull may take time. In worst case scenario, the request to the database may fail till next refresh happens (e.g. 60 secs).
 
 
 ## Actions/RS Configuration
@@ -268,7 +268,7 @@ Once the Secrets Proxy is configured, Actions/RS needs to be set in a particular
 
 **Note**: For integration with Actions/RS, only 1 provider is implemented as of now `proxy_awssm_oauth`. Make sure Secrets Proxy configuration has this provider setup.
 
-1. Follow this (quick guide)[https://hasura.io/docs/latest/actions/quickstart/] to set up a Hasura action. (Note, same steps to be taken for Remote Schema integration too).
+1. Follow this [quick guide](https://hasura.io/docs/latest/actions/quickstart/) to set up a Hasura action. (Note, same steps to be taken for Remote Schema integration too).
 2. The Action webhook handler/RS Endpoint needs to be always set to http://localhost:5353 where the Secrets proxy would be running as a sidecar. **Note**:
   * This should NOT be the Action/RS endpoint
   * Add to this endpoint, any path or query params that you want to pass directly to the downstream endpoint. E.g. If the service endpoint which processes action requests is ‘https://someapp.com/user/details?type=abc’ then the webhook URL for this action should be configured as ‘http://localhost:5353/user/details?type=abc’
