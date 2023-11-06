@@ -1,7 +1,12 @@
 package aws_sm_oauth
 
 import (
+	"bytes"
+	"crypto/sha1"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -10,7 +15,8 @@ import (
 
 func createJwtToken(
 	rsaPrivateKeyPemRaw string, claims map[string]interface{},
-	duration time.Duration, currentTime time.Time, clientId string) (
+	duration time.Duration, currentTime time.Time, clientId string,
+	sslCert string) (
 	jwtString string, err error,
 ) {
 	rsaPrivateKeyPem, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(rsaPrivateKeyPemRaw))
@@ -18,7 +24,15 @@ func createJwtToken(
 		return "", fmt.Errorf("Error parsing rsa private key: %s", err)
 	}
 	jwtClaims, err := makeClaims(duration, currentTime, clientId, claims)
+	if err != nil {
+		return "", fmt.Errorf("Failed to create claims for JWT: %s", err)
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(jwtClaims))
+	fingerprint, err := createFingerprint(sslCert)
+	if err != nil {
+		return "", fmt.Errorf("Failed to create fingerprint for JWT: %s", err)
+	}
+	token.Header["kid"] = fingerprint
 	tokenString, err := token.SignedString(rsaPrivateKeyPem)
 	if err != nil {
 		return tokenString, err
@@ -49,4 +63,22 @@ func makeClaims(
 		claimsMap[k] = v
 	}
 	return claimsMap, nil
+}
+
+func createFingerprint(sslCert string) (string, error) {
+	pemBlock, _ := pem.Decode([]byte(sslCert))
+	if pemBlock == nil {
+		return "", fmt.Errorf("unable to parse pem content for certificate")
+	}
+	cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse x509 certificate")
+	}
+	fingerprintRaw := sha1.Sum(cert.Raw)
+	var buf bytes.Buffer
+	for _, f := range fingerprintRaw {
+		fmt.Fprintf(&buf, "%02X", f)
+	}
+	fingerprint := strings.ToUpper(buf.String())
+	return fingerprint, nil
 }

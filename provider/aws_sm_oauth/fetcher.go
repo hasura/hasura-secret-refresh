@@ -11,6 +11,7 @@ import (
 type secretFetcher struct {
 	*AwsSmOauth
 	certificateSecretId string
+	privateKeySecretId  string
 	backendApiId        string
 	oAuthClientId       string
 }
@@ -58,12 +59,19 @@ func (fetcher secretFetcher) getAccessToken(jwtToken string) (string, error) {
 }
 
 func (fetcher secretFetcher) createJwtToken() (string, error) {
-	rsaPrivateKeyPemRaw, err := fetcher.awsSecretsManager.GetSecretString(fetcher.certificateSecretId)
+	rsaPrivateKeyPemRaw, err := fetcher.awsSecretsManager.GetSecretString(fetcher.privateKeySecretId)
+	if err != nil {
+		return "", fmt.Errorf("%s: unable to retrieve private key from aws secrets manager: %w", UnableToFetch, err)
+	}
+	fetcher.logger.Debug().Str("aws_secret_id", fetcher.privateKeySecretId).Str("aws_response", rsaPrivateKeyPemRaw).Msg("Response from aws secrets manager")
+	sslCert, err := fetcher.awsSecretsManager.GetSecretString(fetcher.certificateSecretId)
 	if err != nil {
 		return "", fmt.Errorf("%s: unable to retrieve certificate from aws secrets manager: %w", UnableToFetch, err)
 	}
-	fetcher.logger.Debug().Str("aws_secret_id", fetcher.certificateSecretId).Str("aws_response", rsaPrivateKeyPemRaw).Msg("Response from aws secrets manager")
-	tokenString, err := createJwtToken(rsaPrivateKeyPemRaw, fetcher.jwtClaimMap, fetcher.jwtDuration, time.Now(), fetcher.oAuthClientId)
+	fetcher.logger.Debug().Str("aws_secret_id", fetcher.privateKeySecretId).Str("aws_response", sslCert).Msg("Response from aws secrets manager")
+	tokenString, err := createJwtToken(rsaPrivateKeyPemRaw, fetcher.jwtClaimMap,
+		fetcher.jwtDuration, time.Now(), fetcher.oAuthClientId, sslCert,
+	)
 	if err != nil {
 		return "", fmt.Errorf("%s: unable to create jwt token: %w", UnableToFetch, err)
 	}
@@ -71,9 +79,10 @@ func (fetcher secretFetcher) createJwtToken() (string, error) {
 }
 
 func (fetcher secretFetcher) getCacheKey() string {
-	return fmt.Sprintf("%s_%s_%s",
+	return fmt.Sprintf("%s_%s_%s_%s",
 		fetcher.certificateSecretId,
 		fetcher.backendApiId,
 		fetcher.oAuthClientId,
+		fetcher.privateKeySecretId,
 	)
 }
