@@ -17,25 +17,36 @@ func createJwtToken(
 	if err != nil {
 		return "", fmt.Errorf("Error parsing rsa private key: %s", err)
 	}
-	jwtDuration := duration
-	currentJwtClaim := make(map[string]interface{})
-	jwtExp := currentTime.Add(jwtDuration).Unix()
-	currentJwtClaim["exp"] = jwtExp
-	currentJwtClaim["sub"] = clientId
-	currentJwtClaim["iss"] = clientId
-	randomUuid, err := uuid.NewRandom()
-	if err != nil {
-		return "", fmt.Errorf("Unable to generate random UUID for 'jti' claim: %s", err)
-	}
-	currentJwtClaim["jti"] = randomUuid
-	currentJwtClaim["iat"] = currentTime.Unix()
-	for k, v := range claims {
-		currentJwtClaim[k] = v
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(currentJwtClaim))
+	jwtClaims, err := makeClaims(duration, currentTime, clientId, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims(jwtClaims))
 	tokenString, err := token.SignedString(rsaPrivateKeyPem)
 	if err != nil {
 		return tokenString, err
 	}
 	return tokenString, nil
+}
+
+func makeClaims(
+	duration time.Duration,
+	currentTime time.Time,
+	clientId string,
+	configClaims map[string]interface{},
+) (map[string]interface{}, error) {
+	jwtDuration := duration
+	jwtExp := currentTime.Add(jwtDuration).Unix()
+
+	randomUuid, err := uuid.NewRandom()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to generate random UUID for 'jti' claim: %s", err)
+	}
+	claimsMap := make(map[string]interface{})
+	claimsMap["exp"] = jwtExp
+	claimsMap["sub"] = clientId
+	claimsMap["iss"] = clientId
+	claimsMap["jti"] = randomUuid
+	claimsMap["iat"] = currentTime.Unix()
+	for k, v := range configClaims {
+		claimsMap[k] = v
+	}
+	return claimsMap, nil
 }
