@@ -71,7 +71,7 @@ func (fetcher secretFetcher) createJwtToken() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: unable to retrieve certificate from aws secrets manager: %w", UnableToFetch, err)
 	}
-	fetcher.logger.Debug().Str("aws_secret_id", fetcher.privateKeySecretId).Str("aws_response", sslCert).Msg("Response from aws secrets manager")
+	fetcher.logger.Debug().Str("aws_secret_id", fetcher.certificateSecretId).Str("aws_response", sslCert).Msg("Response from aws secrets manager")
 	tokenString, err := createJwtToken(rsaPrivateKeyPemRaw, fetcher.jwtClaimMap,
 		fetcher.jwtDuration, time.Now(), fetcher.oAuthClientId, sslCert,
 	)
