@@ -1,5 +1,17 @@
 # Hasura Secrets Management Service
 
+**Table of Contents**
+
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [Configuration](#configuration)
+- Provider types:
+  - [proxy_awsm_oauth](#proxy_awsm_oauth)
+  - [file_aws_secrets_manager](#file_aws_secrets_manager)
+    - [Secret Rotation](#secret-rotation)
+- [Actions/RS Configuration](#actionsrs-configuration)
+- [Data Source Configuration](#data-source-configuration)
+  
 ## Architecture
 Hasura Secrets Management Service (Secrets Proxy) is deployed as a sidecar container in the same pod as the Hasura GraphQL Engine container (**Enterprise Edition only**).
 
