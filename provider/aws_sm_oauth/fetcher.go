@@ -51,6 +51,9 @@ func (fetcher secretFetcher) getAccessToken(jwtToken string) (string, error) {
 		return "", fmt.Errorf("%s: Unable perform oauth request: %w", UnableToFetch, err)
 	}
 	logOAuthResponse(response, "Response from oauth endpoint", fetcher.logger)
+	if response.StatusCode != 200 {
+		return "", fmt.Errorf("Did not receive 200 response from oauth server. Received: status code: %d", response.StatusCode)
+	}
 	accessToken, err := getAccessTokenFromResponse(response, fetcher.logger)
 	if err != nil {
 		return "", fmt.Errorf("%s: Unable to get access token from oauth response: %w", UnableToFetch, err)
