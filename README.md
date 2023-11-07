@@ -276,9 +276,11 @@ Once the Secrets Proxy is configured, Actions/RS needs to be set in a particular
 * `X-Hasura-Forward-To`: Set this to the downstream service URL where the requests should eventually be processed (Action or RS endpoint). Only scheme and host must be configured here. E.g. http://someapp.com’
 * `X-Hasura-Secret-Header`: Value of this header in action will be the header with which the backend service will be called. This accepts a template of ##some_key##. The string surrounded by `##` will be replaced by the access token which we receive from the Secrets Provider (Token service in this case). Eg: `Authorisation: Bearer ##secret_key##` will be replaced with `Authorisation: Bearer abc_123_xyz` when calling downstream service assuming `abc_123_xyz` is the access token which was received from Token Service.
 * `X-Hasura-Secret-Provider`: As per the Proxy Config example, This should be set to `all_action_prod_teamA` since this one is setup against the provider proxy_awssm_oauth in the Proxy ConfigMap.
-* `X-Hasura-Certificate-Id`: The key with which the certificate is stored in AWS Secrets Manager
+* `X-Hasura-Certificate-Id`: The key with which the certificate is stored in AWS Secrets Manager. The fingerprint of this certificate will be included as ‘kid’ in the header of the JWT sent to the OAuth endpoint
 * `X-Hasura-Oauth-Client-Id`: OAuth Client id
 * `X-Hasura-Backend-Id`: Resource id to be passed in the OAuth request
+* `X-Hasura-Private-Key-Id`: The key with which the RSA private key is stored in AWS Secrets Manager. This private key will be used to sign the JWT token sent to the OAuth endpoint.
+
 
 Requests going through the action now will go through the Secrets Proxy ensuring the request headers have been transformed to pick up correct Authorization values in its header.
 
