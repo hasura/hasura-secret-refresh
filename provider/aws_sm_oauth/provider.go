@@ -50,6 +50,7 @@ var (
 
 const (
 	certificateSecretIdHeader = "X-Hasura-Certificate-Id"
+	privateKeySecretIdHeader  = "X-Hasura-Private-Key-Id"
 	oauthClientIdHeader       = "X-Hasura-Oauth-Client-Id"
 	backendApiIdHeader        = "X-Hasura-Backend-Id"
 )
@@ -64,6 +65,11 @@ func (provider AwsSmOauth) SecretFetcher(headers http.Header) (provider.SecretFe
 		notFoundHeaders = append(notFoundHeaders, certificateSecretIdHeader)
 	}
 	secretFetcher.certificateSecretId = certificateSecretId
+	privateKeySecretId := headers.Get(privateKeySecretIdHeader)
+	if privateKeySecretId == "" {
+		notFoundHeaders = append(notFoundHeaders, privateKeySecretIdHeader)
+	}
+	secretFetcher.privateKeySecretId = privateKeySecretId
 	oauthClientId := headers.Get(oauthClientIdHeader)
 	if oauthClientId == "" {
 		notFoundHeaders = append(notFoundHeaders, oauthClientIdHeader)
@@ -85,6 +91,7 @@ func (provider AwsSmOauth) DeleteConfigHeaders(headers *http.Header) {
 	headers.Del(certificateSecretIdHeader)
 	headers.Del(oauthClientIdHeader)
 	headers.Del(backendApiIdHeader)
+	headers.Del(privateKeySecretIdHeader)
 }
 
 func Create(config map[string]interface{}, logger zerolog.Logger) (*AwsSmOauth, error) {

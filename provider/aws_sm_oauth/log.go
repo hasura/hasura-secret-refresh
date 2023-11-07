@@ -2,6 +2,7 @@ package aws_sm_oauth
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -46,13 +47,22 @@ func logOauthRequest(url url.URL, method string, formData url.Values, header htt
 }
 
 func logOAuthResponse(response *http.Response, msg string, logger zerolog.Logger) {
+	debugLog := logger.Debug().
+		Str("status", response.Status).
+		Str("log_type", "response_log")
+	if response.StatusCode != 200 {
+		httpBodyByte, err := io.ReadAll(response.Body)
+		if err == nil {
+			httpBody := string(httpBodyByte)
+			debugLog = debugLog.Str("body", httpBody)
+		} else {
+			debugLog = debugLog.Err(err)
+		}
+	}
 	headerDict := zerolog.Dict()
 	for k, _ := range response.Header {
 		headerDict = headerDict.Str(k, response.Header.Get(k))
 	}
-	logger.Debug().
-		Str("status", response.Status).
-		Str("log_type", "response_log").
-		Dict("headers", headerDict).
-		Msg(msg)
+	debugLog = debugLog.Dict("headers", headerDict)
+	debugLog.Msg(msg)
 }

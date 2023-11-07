@@ -22,7 +22,7 @@ spec:
           name: hasura
           env:
             - name: HASURA_GRAPHQL_DATABASE_URL
-              value: postgres://varundey:QNdZvx5pjkm0@ep-green-grass-53378116.us-west-2.aws.neon.tech/neondb
+              value: postgres://username:password@host:port/db
             - name: HASURA_GRAPHQL_ADMIN_SECRET
               value: mysecretkey
             ## enable the console served by server
