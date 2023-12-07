@@ -2,6 +2,7 @@ package template
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -26,7 +27,7 @@ func jsonTemplate(jsonTemplate, substituteWith string) string {
 	if len(jsonPath) < 2 {
 		return substituteWith
 	}
-	jsonParsed := make(map[string]string)
+	jsonParsed := make(map[string]interface{})
 	err := json.Unmarshal([]byte(substituteWith), &jsonParsed)
 	if err != nil {
 		return ""
@@ -36,6 +37,7 @@ func jsonTemplate(jsonTemplate, substituteWith string) string {
 	if !ok {
 		return ""
 	}
-	val = strings.TrimSpace(val)
-	return val
+	valS := fmt.Sprintf("%v", val)
+	val = strings.TrimSpace(valS)
+	return valS
 }

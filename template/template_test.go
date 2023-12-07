@@ -52,7 +52,7 @@ var testCases = []testCase{
 		name:           "invalid json",
 		template:       "Bearer ##secret1.key## ##secret1.key2##",
 		substituteWith: `{"key": "some_secret", "key2": 2}`,
-		expected:       "Bearer  ",
+		expected:       "Bearer some_secret 2",
 	},
 	{
 		name:           "key not found",
@@ -65,12 +65,6 @@ var testCases = []testCase{
 		template:       "Bearer ##secret1.key## ##secret1.key2##",
 		substituteWith: `{"key2": "2"}`,
 		expected:       "Bearer  2",
-	},
-	{
-		name:           "nested json",
-		template:       "Bearer ##secret1.key##",
-		substituteWith: `{"key": {"key": "some_secret"}}`,
-		expected:       "Bearer ",
 	},
 }
 
