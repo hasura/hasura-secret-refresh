@@ -1,6 +1,7 @@
 package template
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -49,7 +50,7 @@ var testCases = []testCase{
 		expected:       "Bearer some_secret 2",
 	},
 	{
-		name:           "invalid json",
+		name:           "json number",
 		template:       "Bearer ##secret1.key## ##secret1.key2##",
 		substituteWith: `{"key": "some_secret", "key2": 2}`,
 		expected:       "Bearer some_secret 2",
@@ -58,7 +59,7 @@ var testCases = []testCase{
 		name:           "key not found",
 		template:       "Bearer ##secret1.key## ##secret1.key2##",
 		substituteWith: `{"key": "some_secret"}`,
-		expected:       "Bearer some_secret ",
+		expected:       "Bearer some_secret",
 	},
 	{
 		name:           "key not found 2",
@@ -66,13 +67,19 @@ var testCases = []testCase{
 		substituteWith: `{"key2": "2"}`,
 		expected:       "Bearer  2",
 	},
+	{
+		name:           "json template multiple types",
+		template:       "Bearer ##secret1.key1## ##secret1.key2## ##secret1.three## ##secret1.point## ##secret1.array##",
+		substituteWith: `{"key1": "one", "key2": 2, "three": true, "point": 1.5, "array": [1, true, "ok"]}`,
+		expected:       "Bearer one 2 true 1.5 [1 true ok]",
+	},
 }
 
 func TestTemplate_GetKeysFromTemplates(t *testing.T) {
 	for _, testCase := range testCases {
 		template := Template(testCase.template)
 		actual := template.Substitute(testCase.substituteWith)
-		if testCase.expected != actual {
+		if testCase.expected != strings.TrimSpace(actual) {
 			t.Errorf("Test case - %s: Expected '%s' but got '%s'", testCase.name, testCase.expected, actual)
 		}
 	}
