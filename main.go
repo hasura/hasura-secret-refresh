@@ -60,7 +60,10 @@ func main() {
 	}
 	httpServer := server.Create(config, logger)
 	http.Handle("/", httpServer)
-	http.ListenAndServe(":5353", nil)
+	err = http.ListenAndServe(":5353", nil)
+	if err != nil {
+		logger.Err(err).Msg("Error from server")
+	}
 }
 
 func getLogLevel(level string, logger zerolog.Logger) zerolog.Level {
