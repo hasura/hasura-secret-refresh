@@ -38,6 +38,6 @@ func jsonTemplate(jsonTemplate, substituteWith string) string {
 		return ""
 	}
 	valS := fmt.Sprintf("%v", val)
-	val = strings.TrimSpace(valS)
+	valS = strings.TrimSpace(valS)
 	return valS
 }
