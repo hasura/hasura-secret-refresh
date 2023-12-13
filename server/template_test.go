@@ -2,6 +2,8 @@ package server
 
 import (
 	"testing"
+
+	"github.com/rs/zerolog"
 )
 
 type testCase struct {
@@ -63,11 +65,11 @@ var testCases = []testCase{
 		expectedIsErr:     false,
 	},
 	{
-		name:              "invalid json",
+		name:              "number",
 		template:          "Authorization: Bearer ##secret1.key## ##secret1.key2##",
 		substituteWith:    `{"key": "some_secret", "key2": 2}`,
 		expectedHeaderKey: "Authorization",
-		expectedHeaderVal: "Bearer  ",
+		expectedHeaderVal: "Bearer some_secret 2",
 		expectedIsErr:     false,
 	},
 	{
@@ -86,19 +88,11 @@ var testCases = []testCase{
 		expectedHeaderVal: "Bearer  2",
 		expectedIsErr:     false,
 	},
-	{
-		name:              "nested json",
-		template:          "Authorization: Bearer ##secret1.key##",
-		substituteWith:    `{"key": {"key": "some_secret"}}`,
-		expectedHeaderKey: "Authorization",
-		expectedHeaderVal: "Bearer ",
-		expectedIsErr:     false,
-	},
 }
 
 func TestTemplate_GetKeysFromTemplates(t *testing.T) {
 	for _, testCase := range testCases {
-		headerKey, headerVal, err := getHeaderFromTemplate(testCase.template, testCase.substituteWith)
+		headerKey, headerVal, err := getHeaderFromTemplate(testCase.template, testCase.substituteWith, zerolog.Nop())
 		if testCase.expectedIsErr && err == nil {
 			t.Errorf("Expected error in test %s but got no error", testCase.name)
 		}

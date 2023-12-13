@@ -158,7 +158,7 @@ func getHeader(
 	requestConfig requestConf, requestLogger zerolog.Logger,
 ) (headerKey string, headerVal string, ok bool) {
 	ok = true
-	headerKey, headerVal, err := getHeaderFromTemplate(requestConfig.headerTemplate, secret)
+	headerKey, headerVal, err := getHeaderFromTemplate(requestConfig.headerTemplate, secret, requestLogger)
 	if err != nil {
 		ok = false
 		errMsg := fmt.Sprintf("Header template %s sent in header %s is not valid", requestConfig.headerTemplate, templateHeader)

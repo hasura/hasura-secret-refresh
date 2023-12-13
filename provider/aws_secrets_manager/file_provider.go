@@ -111,7 +111,7 @@ func (provider AwsSecretsManagerFile) Start() {
 		} else {
 			secretString := *res.SecretString
 			if provider.template != "" {
-				templ := template.Template(provider.template)
+				templ := template.Template{Templ: provider.template, Logger: provider.logger}
 				secretString = templ.Substitute(secretString)
 			}
 			err = os.WriteFile(provider.filePath, []byte(secretString), 0777)
