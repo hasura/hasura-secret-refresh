@@ -3,6 +3,7 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -44,6 +45,11 @@ func jsonTemplate(jsonTemplate, substituteWith string, logger zerolog.Logger) st
 	if !ok {
 		logger.Error().Msgf("Key %s not found in secret", jsonKey)
 		logger.Debug().Msgf("Key %s not found in secret %s", jsonKey, substituteWith)
+		return ""
+	}
+	if reflect.ValueOf(val).Kind() == reflect.Map {
+		logger.Error().Msgf("Nested JSON is not supported in secrets")
+		logger.Debug().Msgf("Nested JSON is not supported, secret: %s", substituteWith)
 		return ""
 	}
 	valS := fmt.Sprintf("%v", val)

@@ -81,6 +81,12 @@ var testCases = []testCase{
 		substituteWith: `{"key1": one", "key2": 2, "three": true, "point": 1.5, "array": [1, true, "ok"]}`,
 		expected:       "Bearer",
 	},
+	{
+		name:           "nested JSON",
+		template:       "Bearer ##secret1.key.key##",
+		substituteWith: `{"key": {"key": "key"}}`,
+		expected:       "Bearer",
+	},
 }
 
 func TestTemplate_GetKeysFromTemplates(t *testing.T) {
