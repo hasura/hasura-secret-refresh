@@ -3,6 +3,8 @@ package template
 import (
 	"strings"
 	"testing"
+
+	"github.com/rs/zerolog"
 )
 
 type testCase struct {
@@ -73,13 +75,25 @@ var testCases = []testCase{
 		substituteWith: `{"key1": "one", "key2": 2, "three": true, "point": 1.5, "array": [1, true, "ok"]}`,
 		expected:       "Bearer one 2 true 1.5 [1 true ok]",
 	},
+	{
+		name:           "invalid json",
+		template:       "Bearer ##secret1.key1## ##secret1.key2## ##secret1.three## ##secret1.point## ##secret1.array##",
+		substituteWith: `{"key1": one", "key2": 2, "three": true, "point": 1.5, "array": [1, true, "ok"]}`,
+		expected:       "Bearer",
+	},
+	{
+		name:           "nested JSON",
+		template:       "Bearer ##secret1.key.key##",
+		substituteWith: `{"key": {"key": "key"}}`,
+		expected:       "Bearer",
+	},
 }
 
 func TestTemplate_GetKeysFromTemplates(t *testing.T) {
 	for _, testCase := range testCases {
-		template := Template(testCase.template)
+		template := Template{testCase.template, zerolog.Nop()}
 		actual := template.Substitute(testCase.substituteWith)
-		if testCase.expected != strings.TrimSpace(actual) {
+		if strings.TrimSpace(testCase.expected) != strings.TrimSpace(actual) {
 			t.Errorf("Test case - %s: Expected '%s' but got '%s'", testCase.name, testCase.expected, actual)
 		}
 	}
