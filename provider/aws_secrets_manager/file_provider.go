@@ -107,10 +107,10 @@ func (provider AwsSecretsManagerFile) Start() {
 		}
 		err = provider.writeFile(secret)
 		if err != nil {
-			provider.logger.Info().Msgf("aws_secrets_manager_file: Successfully fetched secret %s. Fetching again in %s", provider.secretId, provider.refreshInterval)
 			time.Sleep(provider.refreshInterval)
 			continue
 		}
+		provider.logger.Info().Msgf("aws_secrets_manager_file: Successfully fetched secret %s. Fetching again in %s", provider.secretId, provider.refreshInterval)
 		time.Sleep(provider.refreshInterval)
 	}
 }
