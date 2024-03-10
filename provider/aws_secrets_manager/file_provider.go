@@ -129,6 +129,10 @@ func (provider AwsSecretsManagerFile) Refresh() error {
 	return nil
 }
 
+func (provider AwsSecretsManagerFile) FileName() string {
+	return provider.filePath
+}
+
 func (provider AwsSecretsManagerFile) getSecret() (string, error) {
 	provider.logger.Info().Msgf("aws_secrets_manager_file: Fetching secret %s", provider.secretId)
 	res, err := provider.secretsManager.GetSecretValue(

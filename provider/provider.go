@@ -10,6 +10,7 @@ type HttpProvider interface {
 type FileProvider interface {
 	Start()
 	Refresh() error
+	FileName() string
 }
 
 type SecretFetcher interface {
