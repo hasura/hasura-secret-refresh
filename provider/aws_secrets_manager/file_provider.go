@@ -100,26 +100,59 @@ func (provider AwsSecretsManagerFile) Start() {
 		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing to file %s", provider.filePath)
 	}
 	for {
-		provider.logger.Info().Msgf("aws_secrets_manager_file: Fetching secret %s", provider.secretId)
-		res, err := provider.secretsManager.GetSecretValue(
-			&secretsmanager.GetSecretValueInput{
-				SecretId: &provider.secretId,
-			},
-		)
+		secret, err := provider.getSecret()
 		if err != nil {
-			provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while retrieving secret '%s' from aws secrets manager", provider.secretId)
-		} else {
-			secretString := *res.SecretString
-			if provider.template != "" {
-				templ := template.Template{Templ: provider.template, Logger: provider.logger}
-				secretString = templ.Substitute(secretString)
-			}
-			err = os.WriteFile(provider.filePath, []byte(secretString), 0777)
-			if err != nil {
-				provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
-			}
+			time.Sleep(provider.refreshInterval)
+			continue
+		}
+		err = provider.writeFile(secret)
+		if err != nil {
 			provider.logger.Info().Msgf("aws_secrets_manager_file: Successfully fetched secret %s. Fetching again in %s", provider.secretId, provider.refreshInterval)
+			time.Sleep(provider.refreshInterval)
+			continue
 		}
 		time.Sleep(provider.refreshInterval)
 	}
+}
+
+func (provider AwsSecretsManagerFile) Refresh() error {
+	provider.logger.Info().Msgf("aws_secrets_manager_file: Refresh invoked for secret %s", provider.secretId)
+	secret, err := provider.getSecret()
+	if err != nil {
+		return err
+	}
+	err = provider.writeFile(secret)
+	if err != nil {
+		return err
+	}
+	provider.logger.Info().Msgf("aws_secrets_manager_file: Successfully refreshed secret %s upon invocation", provider.secretId)
+	return nil
+}
+
+func (provider AwsSecretsManagerFile) getSecret() (string, error) {
+	provider.logger.Info().Msgf("aws_secrets_manager_file: Fetching secret %s", provider.secretId)
+	res, err := provider.secretsManager.GetSecretValue(
+		&secretsmanager.GetSecretValueInput{
+			SecretId: &provider.secretId,
+		},
+	)
+	if err != nil {
+		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while retrieving secret '%s' from aws secrets manager", provider.secretId)
+		return "", err
+	}
+	secretString := *res.SecretString
+	if provider.template != "" {
+		templ := template.Template{Templ: provider.template, Logger: provider.logger}
+		secretString = templ.Substitute(secretString)
+	}
+	return secretString, nil
+}
+
+func (provider AwsSecretsManagerFile) writeFile(secretString string) error {
+	err := os.WriteFile(provider.filePath, []byte(secretString), 0777)
+	if err != nil {
+		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
+		return err
+	}
+	return nil
 }
