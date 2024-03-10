@@ -3,6 +3,7 @@ package aws_secrets_manager
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,6 +20,7 @@ type AwsSecretsManagerFile struct {
 	secretId        string
 	template        string
 	logger          zerolog.Logger
+	mu              *sync.Mutex
 }
 
 func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.Logger) (AwsSecretsManagerFile, error) {
@@ -153,6 +155,8 @@ func (provider AwsSecretsManagerFile) getSecret() (string, error) {
 }
 
 func (provider AwsSecretsManagerFile) writeFile(secretString string) error {
+	provider.mu.Lock()
+	defer provider.mu.Unlock()
 	err := os.WriteFile(provider.filePath, []byte(secretString), 0777)
 	if err != nil {
 		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
