@@ -66,8 +66,9 @@ func main() {
 		for _, p := range fileProviders {
 			refreshConfig[p.FileName()] = p
 		}
-		refresher := server.RefreshConfig{refreshConfig}
+		refresher := server.RefreshConfig{refreshConfig, logger}
 		http.Handle(refreshEndpoint, refresher)
+		logger.Info().Msgf("Refresh endpoint set to: %s", refreshEndpoint)
 	}
 	err = http.ListenAndServe(":5353", nil)
 	if err != nil {

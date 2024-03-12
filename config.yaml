@@ -46,3 +46,6 @@ aws_secrets_manager_file_json:
 
 log_config:
   level: "info"
+
+refresh_config:
+  endpoint: /refresh
