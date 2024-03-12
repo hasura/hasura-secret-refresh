@@ -87,6 +87,7 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 		secretId:        secretId,
 		logger:          logger,
 		template:        secretTemplate,
+		mu:              &sync.Mutex{},
 	}
 	logger.Info().
 		Str("refresh", refreshInterval.String()).
