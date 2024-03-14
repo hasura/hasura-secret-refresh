@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"net/url"
 
 	"github.com/rs/zerolog"
 )
@@ -27,7 +28,8 @@ func (t Template) Substitute(with string) string {
 		if canContinue {
 			res, canContinue = jsonTemplate(s, with, t.Logger)
 		}
-		return res
+		// NOTE: AWS secrets can contain special characters so let's escape them.
+		return url.QueryEscape(res)
 	})
 	return result
 }
