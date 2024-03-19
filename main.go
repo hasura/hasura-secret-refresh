@@ -60,6 +60,16 @@ func main() {
 	}
 	httpServer := server.Create(config, logger)
 	http.Handle("/", httpServer)
+	refreshEndpoint := viper.GetString("refresh_config.endpoint")
+	if _, hasRefreshConfig := conf["refresh_config"]; hasRefreshConfig {
+		refreshConfig := make(map[string]provider.FileProvider)
+		for _, p := range fileProviders {
+			refreshConfig[p.FileName()] = p
+		}
+		refresher := server.RefreshConfig{refreshConfig, logger}
+		http.Handle(refreshEndpoint, refresher)
+		logger.Info().Msgf("Refresh endpoint set to: %s", refreshEndpoint)
+	}
 	err = http.ListenAndServe(":5353", nil)
 	if err != nil {
 		logger.Err(err).Msg("Error from server")
@@ -86,7 +96,7 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 	config.Providers = make(map[string]provider.HttpProvider)
 	fileProviders = make([]provider.FileProvider, 0, 0)
 	for k, v := range rawConfig {
-		if k == "log_config" {
+		if k == "log_config" || k == "refresh_config" {
 			continue
 		}
 		providerData, ok := v.(map[string]interface{})
