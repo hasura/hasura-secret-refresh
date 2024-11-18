@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/hasura/hasura-secret-refresh/provider"
+	awsIamRds "github.com/hasura/hasura-secret-refresh/provider/aws_iam_auth_rds"
 	awsSm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
 	awsSmOauth "github.com/hasura/hasura-secret-refresh/provider/aws_sm_oauth"
 	"github.com/hasura/hasura-secret-refresh/server"
@@ -23,6 +24,7 @@ const (
 	aws_secrets_manager = "proxy_aws_secrets_manager"
 	aws_sm_oauth        = "proxy_awssm_oauth"
 	aws_sm_file         = "file_aws_secrets_manager"
+	aws_iam_auth_rds    = "file_aws_iam_auth_rds"
 )
 
 func main() {
@@ -139,6 +141,13 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 				return
 			}
 			fileProviders = append(fileProviders, fProvider_)
+		} else if providerType == aws_iam_auth_rds {
+			// var iamProvider provider.IAMProvider
+			_, err = awsIamRds.Create(providerData, sublogger)
+			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
+				return
+			}
 		} else {
 			err = fmt.Errorf("Unknown provider type '%s' specified for provider '%s'", providerType, k)
 			logger.Err(err).Msgf("Error in config")
