@@ -143,11 +143,13 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 			fileProviders = append(fileProviders, fProvider_)
 		} else if providerType == aws_iam_auth_rds {
 			// var iamProvider provider.IAMProvider
-			_, err = awsIamRds.Create(providerData, sublogger)
+			var iamProvider provider.FileProvider
+			iamProvider, err = awsIamRds.New(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
 				return
 			}
+			fileProviders = append(fileProviders, iamProvider)
 		} else {
 			err = fmt.Errorf("Unknown provider type '%s' specified for provider '%s'", providerType, k)
 			logger.Err(err).Msgf("Error in config")
