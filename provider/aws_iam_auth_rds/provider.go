@@ -84,9 +84,6 @@ func (provider *AWSIAMAuthRDSFile) Start() {
 
 func (provider AWSIAMAuthRDSFile) getSecret() (string, error) {
 	var dbEndpoint string = fmt.Sprintf("%s:%d", provider.DBHost, provider.DBPort)
-	fmt.Println("B")
-	fmt.Println(dbEndpoint)
-
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		provider.logger.Err(err).Msgf("aws_iam_auth_rds_file: auth configuration error :%s", err.Error())
@@ -124,5 +121,17 @@ func (provider AWSIAMAuthRDSFile) FileName() string {
 }
 
 func (provider AWSIAMAuthRDSFile) Refresh() error {
+	authenticationToken, err := provider.getSecret()
+	if err != nil {
+		// this should succeed ideally, and if that fails we need to act
+		return err
+	}
+	err = provider.writeFile(authenticationToken)
+
+	if err != nil {
+		// todo: handle
+		return err
+	}
+	provider.logger.Info().Msgf("aws_iam_auth_rds_file: Successfully fetched IAM Token. Fetching again in %s", provider.refreshInterval)
 	return nil
 }
