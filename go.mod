@@ -2,8 +2,6 @@ module github.com/hasura/hasura-secret-refresh
 
 go 1.21
 
-toolchain go1.23.3
-
 require (
 	github.com/aws/aws-sdk-go v1.44.287
 	github.com/aws/aws-sdk-go-v2/config v1.28.4
