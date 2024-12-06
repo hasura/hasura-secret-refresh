@@ -6,21 +6,22 @@ toolchain go1.23.3
 
 require (
 	github.com/aws/aws-sdk-go v1.44.287
+	github.com/aws/aws-sdk-go-v2/config v1.28.4
+	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.4.23
 	github.com/aws/aws-secretsmanager-caching-go v1.1.2
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hashicorp/golang-lru/v2 v2.0.6
+	github.com/lib/pq v1.10.9
 	github.com/rs/zerolog v1.30.0
 	github.com/spf13/viper v1.16.0
 )
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.4 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.28.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.45 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.19 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.4.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.23 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
