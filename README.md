@@ -279,7 +279,7 @@ The provider `file_aws_secrets_manager` works in conjunction with the new featur
 
 Following prerequisites are mandatory for RDS IAM Auth to work
 1. RDS should be configured with `iamDatabaseAuthenticationEnabled` property
-2. Grant IAM auth the required user. A new user can be created using the below
+2. Grant IAM auth the required user and any other permission like tables/schema .... A new user can be created using the below
 
 ```
 CREATE USER karthikvt26_iam;
