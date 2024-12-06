@@ -283,7 +283,9 @@ Following prerequisites are mandatory for RDS IAM Auth to work
 
 ```
 CREATE USER karthikvt26_iam;
-GRANT rds_iam TO karthikvt26_iam
+GRANT rds_iam TO karthikvt26_iam;
+GRANT CREATE ON SCHEMA <schema> to karthikvt26_iam; -- allow IAM user to create on schema
+GRANT ALL ON SCHEMA <schema> to karthikvt26_iam; -- allow IAM user to do anything on the schema
 ```
 
 3. Create a policy on IAM to allow access to the database using `rds-db:connect`. Checkout AWS docs for more info
