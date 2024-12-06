@@ -142,7 +142,6 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 			}
 			fileProviders = append(fileProviders, fProvider_)
 		} else if providerType == aws_iam_auth_rds {
-			// var iamProvider provider.IAMProvider
 			var iamProvider provider.FileProvider
 			iamProvider, err = awsIamRds.New(providerData, sublogger)
 			if err != nil {

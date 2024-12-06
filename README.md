@@ -9,6 +9,7 @@
   - [proxy_awsm_oauth](#proxy_awsm_oauth)
   - [file_aws_secrets_manager](#file_aws_secrets_manager)
     - [Secret Rotation](#secret-rotation)
+  - [file_aws_iam_auth_rds](#file_aws_iam_auth_rds)
 - [Actions/RS Configuration](#actionsrs-configuration)
 - [Data Source Configuration](#data-source-configuration)
   
@@ -148,6 +149,15 @@ data:
     secret_id: json_secret
     path: /secret/dbsecret.txt
     template: postgres://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+
+  aws_iam_auth_rds:
+    type: "file_aws_iam_auth_rds"
+    region: "ap-south-1"
+    db_name: "postgres"
+    db_user: "karthikvt26_iam"
+    db_host: "rds-hasura12a42cb.cdaicbsap2wa.ap-south-1.rds.amazonaws.com"
+    db_port: 5432
+    path: token_file
    
    log_config:
     level: "info"
@@ -155,9 +165,10 @@ data:
 
 The Secrets Proxy supports multiple mechanisms of fetching and injecting secrets for any number of use cases and integrations.
 
-Each section of the configuration is backed by a type of provider. There are 2 types of providers currently supported: 
+Each section of the configuration is backed by a type of provider. There are 3 types of providers currently supported: 
 1. `proxy_awssm_oauth`
 2. `file_aws_secrets_manager`
+3. `file_aws_iam_auth_rds`
 
 Any provider starting with `proxy_` is the type which acts as a forward proxy for credential injections to Actions and Remote Schemas.
 
@@ -262,6 +273,70 @@ The provider `file_aws_secrets_manager` works in conjunction with the new featur
 * When Hasura encounters an Auth error with a downstream database (say, due to old credentials), Hasura will re-read the credentials from the shared secret file and retry the request. If Secrets Proxy has already updated the secret as per the refresh policy, Hasura will pick up the new credential and retry the request.
 * Since Secrets Proxy, has a refresh interval, the new secret pull may take time. In worst case scenario, the request to the database may fail till next refresh happens (e.g. 60 secs).
 
+### file_aws_iam_auth_rds
+
+#### Prerequisites
+
+Following prerequisites are mandatory for RDS IAM Auth to work
+1. RDS should be configured with `iamDatabaseAuthenticationEnabled` property
+2. Grant IAM auth the required user. A new user can be created using the below
+
+```
+CREATE USER karthikvt26_iam;
+GRANT rds_iam TO karthikvt26_iam
+```
+
+3. Create a policy on IAM to allow access to the database using `rds-db:connect`. Checkout AWS docs for more info
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "rds-db:connect"
+            ],
+            "Resource": [
+                "arn:aws:rds-db:ap-south-1:489732355779:dbuser:db-GTYU6HCLKVIX3XQAMBT32WWDVR/karthikvt26_iam"
+            ]
+        }
+    ]
+}
+```
+
+4. Create a IAM role and attach the above policy to the same
+5. Ensure hasura-secret-refresh can assume the above role via the service account/any other mechanism so that it can generate tokens (need infra folks to help verify)
+
+
+This type connects to the RDS instance using the configuration set. The configuration would look like below
+* type: "file_aws_iam_auth_rds"
+* region: AWS region where Database instance is running
+* db_name: Token will be generated for this database
+* db_user: Database user
+* db_host: Host of the database typically of the format: `rds-....ap-south-1.rds.amazonaws.com`
+* db_port: Database Port configured to accept connections
+* path: Path where token will be stored
+* 
+
+#### Example Config
+```
+.. other config
+
+aws_iam_auth_rds:
+  type: "file_aws_iam_auth_rds"
+  region: "ap-south-1"
+  db_name: "postgres"
+  db_user: "karthikvt26_iam"
+  db_host: "rds-hasura12a42cb.cdaicbsap2wa.ap-south-1.rds.amazonaws.com"
+  db_port: 5432
+  path: /home/karthikv/Work/hasura-dev/pgproxy/token_file
+
+.. other config
+```
+
+#### Secret Rotation
+Provider also supports token refresh at /refresh endpoint. Pass the file name to trigger a refresh
 
 ## Actions/RS Configuration
 Once the Secrets Proxy is configured, Actions/RS needs to be set in a particular manner in Hasura in order to get the pass the relevant parameters for the integration.

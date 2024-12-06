@@ -48,13 +48,12 @@ func (provider *AWSIAMAuthRDSFile) buildDSN(authenticationToken string) string {
 }
 
 func (provider *AWSIAMAuthRDSFile) checkDSNConnectivity(dsn string) error {
-	// check if the token generated can indeed be used to connect
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		// log the error and
 		return err
 	}
 
+	// check if the token generated can indeed be used to connect
 	err = db.Ping()
 	if err != nil {
 		provider.logger.Error().Err(err).Msg("failed to ping the database with the generated token")
