@@ -44,6 +44,15 @@ aws_secrets_manager_file_json:
   path: ./testsecretJson
   template: postgres://##secret.username##:##secret.password##@##secret.host##:##secret.port##/dbname
 
+aws_iam_auth_rds:
+  type: "file_aws_iam_auth_rds"
+  region: "ap-south-1"
+  db_name: "postgres"
+  db_user: "karthikvt26_iam"
+  db_host: "rds-hasura12a42cb.cdaicbsap2wa.ap-south-1.rds.amazonaws.com"
+  db_port: 5432
+  path: /home/karthikv/Work/hasura-dev/pgproxy/token_file
+
 log_config:
   level: "info"
 
