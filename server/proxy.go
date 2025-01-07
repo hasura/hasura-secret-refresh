@@ -8,8 +8,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type DeploymentType string
+
+const (
+	InitContainer DeploymentType = "initcontainer"
+	Sidecar       DeploymentType = "sidecar"
+)
+
 type Config struct {
-	Providers map[string]provider.HttpProvider
+	Providers      map[string]provider.HttpProvider
+	DeploymentType DeploymentType
 }
 
 type rewriteRequest func(*httputil.ProxyRequest)

@@ -28,7 +28,7 @@ const (
 )
 
 func main() {
-	viper.SetConfigName("config")
+	viper.SetConfigName("k_config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
@@ -57,6 +57,26 @@ func main() {
 	logger.Info().Msgf("%d providers initialized: %d file provider, %d http provider",
 		totalProviders, len(fileProviders), len(config.Providers),
 	)
+
+	// if the type is init container, then we need to identify the last execution status to mark
+	// whether we are done with fileProvider or not?
+	// init-container cannot be used to detect loading of proxy based secret
+	// retriever
+	if config.DeploymentType == server.InitContainer {
+		// Just run the refresh method and if anything fails, exit
+		for _, p := range fileProviders {
+			err := p.Refresh()
+			if err != nil {
+				// os.Exit() or something
+				logger.Err(err).Msg("Encountered an error while loading secrets from configured file providers")
+				os.Exit(1)
+			}
+		}
+		logger.Info().Msg("Loaded all secrets into file")
+		os.Exit(0)
+		// Exit gracefully
+	}
+
 	for _, p := range fileProviders {
 		go p.Start()
 	}
@@ -98,6 +118,18 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 	config.Providers = make(map[string]provider.HttpProvider)
 	fileProviders = make([]provider.FileProvider, 0, 0)
 	for k, v := range rawConfig {
+		if k == "type" {
+			t := v.(string)
+			switch t {
+			case "initcontainer":
+				config.DeploymentType = server.InitContainer
+			case "sidecar":
+				config.DeploymentType = server.Sidecar
+			default:
+				err = fmt.Errorf("Unknown deployment type '%s'", t)
+				return
+			}
+		}
 		if k == "log_config" || k == "refresh_config" {
 			continue
 		}
