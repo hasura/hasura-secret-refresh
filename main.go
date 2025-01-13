@@ -28,7 +28,7 @@ const (
 )
 
 func main() {
-	viper.SetConfigName("k_config")
+	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
