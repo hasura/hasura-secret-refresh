@@ -20,6 +20,13 @@ const (
 	ConfigFileCliFlagDescription = "path to config file"
 )
 
+type DeploymentType string
+
+const (
+	InitContainer DeploymentType = "initcontainer"
+	Sidecar       DeploymentType = "sidecar"
+)
+
 const (
 	aws_secrets_manager = "proxy_aws_secrets_manager"
 	aws_sm_oauth        = "proxy_awssm_oauth"
@@ -47,7 +54,7 @@ func main() {
 
 	conf := viper.GetViper().AllSettings()
 
-	config, fileProviders, err := parseConfig(conf, logger)
+	config, fileProviders, deploymentType, err := parseConfig(conf, logger)
 	if err != nil {
 		initLogger.Fatal().Err(err).Msg("Unable to parse config file")
 	}
@@ -57,6 +64,26 @@ func main() {
 	logger.Info().Msgf("%d providers initialized: %d file provider, %d http provider",
 		totalProviders, len(fileProviders), len(config.Providers),
 	)
+
+	// if the type is init container, then we need to identify the last execution status to mark
+	// whether we are done with fileProvider or not?
+	// init-container cannot be used to detect loading of proxy based secret
+	// retriever
+	if deploymentType == InitContainer {
+		// Just run the refresh method and if anything fails, exit
+		for _, p := range fileProviders {
+			err := p.Refresh()
+			if err != nil {
+				// os.Exit() or something
+				logger.Err(err).Msg("Encountered an error while loading secrets from configured file providers")
+				os.Exit(1)
+			}
+		}
+		logger.Info().Msg("Loaded all secrets into file")
+		os.Exit(0)
+		// Exit gracefully
+	}
+
 	for _, p := range fileProviders {
 		go p.Start()
 	}
@@ -94,10 +121,20 @@ func getLogLevel(level string, logger zerolog.Logger) zerolog.Level {
 	}
 }
 
-func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (config server.Config, fileProviders []provider.FileProvider, err error) {
+func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (config server.Config, fileProviders []provider.FileProvider, deploymentType DeploymentType, err error) {
 	config.Providers = make(map[string]provider.HttpProvider)
 	fileProviders = make([]provider.FileProvider, 0, 0)
 	for k, v := range rawConfig {
+		if k == "type" {
+			t := v.(string)
+			switch t {
+			case "initcontainer":
+				deploymentType = InitContainer
+			default:
+				deploymentType = Sidecar
+			}
+			continue
+		}
 		if k == "log_config" || k == "refresh_config" {
 			continue
 		}

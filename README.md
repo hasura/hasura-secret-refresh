@@ -4,6 +4,7 @@
 
 - [Architecture](#architecture)
 - [Deployment](#deployment)
+  - [Deployment Modes](#deployment-modes)
 - [Configuration](#configuration)
 - Provider types:
   - [proxy_awsm_oauth](#proxy_awsm_oauth)
@@ -116,6 +117,12 @@ The manifest can now be deployed using the command kubectl apply -f . You can en
 The secrets from file provider type should also be mounted to the specified location. We can check for that using
 `kubectl exec -it <hasura_pod_id> -c secrets-management-proxy -- sh`
 Once you are into the shell, try doing `cat secret/dbsecret.txt`. This should fetch you the templatised secret from your secret manager.
+
+### Deployment Modes
+
+Hasura secret refresher can be deployed as a sidecar or an init container (*defaults to sidecar* if not specified). The purposes of each are as follows
+1. Init Container (initcontainer) - for initialization purposes like fetching secrets from external sources and exit
+2. Sidecar (sidecar) - for assisting the main container for its lifetime
 
 ## Configuration
 The Secrets Proxy requires a configuration file which contains configuration for secrets manager integration and other directives.

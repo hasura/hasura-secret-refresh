@@ -4,3 +4,5 @@ testsecret
 testsecretJson
 iam_db_secret
 main
+*.secret
+k_config.yaml
