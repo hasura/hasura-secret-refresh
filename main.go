@@ -130,12 +130,10 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 			switch t {
 			case "initcontainer":
 				deploymentType = InitContainer
-			case "sidecar":
-				deploymentType = Sidecar
 			default:
-				err = fmt.Errorf("Unknown deployment type '%s'", t)
-				return
+				deploymentType = Sidecar
 			}
+			continue
 		}
 		if k == "log_config" || k == "refresh_config" {
 			continue
