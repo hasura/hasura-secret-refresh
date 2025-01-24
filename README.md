@@ -120,7 +120,7 @@ Once you are into the shell, try doing `cat secret/dbsecret.txt`. This should fe
 
 ### Deployment Modes
 
-Hasura secret refresher can be deployed as a sidecar or an init container. The purposes of each are as follows
+Hasura secret refresher can be deployed as a sidecar or an init container (*defaults to sidecar* if not specified). The purposes of each are as follows
 1. Init Container (initcontainer) - for initialization purposes like fetching secrets from external sources and exit
 2. Sidecar (sidecar) - for assisting the main container for its lifetime
 
