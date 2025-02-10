@@ -59,6 +59,12 @@ func (provider *AWSIAMAuthRDSFile) checkDSNConnectivity(dsn string) error {
 		provider.logger.Error().Err(err).Msg("failed to ping the database with the generated token")
 		return err
 	}
+	// close the conn
+	err = db.Close()
+	if err != nil {
+		provider.logger.Error().Err(err).Msg("failed to close the database after an initial ping")
+		return err
+	}
 	return nil
 }
 
