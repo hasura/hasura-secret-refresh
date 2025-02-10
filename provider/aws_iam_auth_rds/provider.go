@@ -52,6 +52,7 @@ func (provider *AWSIAMAuthRDSFile) checkDSNConnectivity(dsn string) error {
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	// check if the token generated can indeed be used to connect
 	err = db.Ping()
