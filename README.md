@@ -329,7 +329,8 @@ This type connects to the RDS instance using the configuration set. The configur
 * template: if set to non-empty string, it will be used to build a connection string
   example:  
     template: host=##.db_host## port=##.db_port## dbname=##.db_name## user=##.db_user## password=##.password##
-  in the above example, every other variable will be templated from the config and password will be replaced by the IAM Token
+  in the above example, every other variable will be templated from the config and password will be replaced by the IAM Token.
+  If template is not set, then the token will be set in the file
 
 #### Example Config
 ```
