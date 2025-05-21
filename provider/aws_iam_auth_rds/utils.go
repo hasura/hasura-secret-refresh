@@ -67,6 +67,15 @@ func parseInputConfig(config map[string]interface{}, logger zerolog.Logger) (*AW
 		logger.Error().Msg("'db_port' must be an int")
 		return nil, fmt.Errorf("config not valid")
 	}
+	templateI, found := config["template"]
+	template := ""
+	if found {
+		template, ok = templateI.(string)
+		if !ok {
+			logger.Error().Msg("'template' must be an string")
+			return nil, fmt.Errorf("config not valid")
+		}
+	}
 	return &AWSIAMAuthRDSFile{
 		region:   region,
 		dbName:   dbName,
@@ -74,5 +83,6 @@ func parseInputConfig(config map[string]interface{}, logger zerolog.Logger) (*AW
 		dbHost:   dbHost,
 		dbPort:   dbPort,
 		filePath: filePath,
+		template: template,
 	}, nil
 }

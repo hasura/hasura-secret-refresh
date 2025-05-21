@@ -326,7 +326,10 @@ This type connects to the RDS instance using the configuration set. The configur
 * db_host: Host of the database typically of the format: `rds-....ap-south-1.rds.amazonaws.com`
 * db_port: Database Port configured to accept connections
 * path: Path where token will be stored
-* 
+* template: if set to non-empty string, it will be used to build a connection string
+  example:  
+    template: host=##.db_host## port=##.db_port## dbname=##.db_name## user=##.db_user## password=##.password##
+  in the above example, every other variable will be templated from the config and password will be replaced by the IAM Token
 
 #### Example Config
 ```
@@ -339,7 +342,8 @@ aws_iam_auth_rds:
   db_user: "karthikvt26_iam"
   db_host: "rds-hasura12a42cb.cdaicbsap2wa.ap-south-1.rds.amazonaws.com"
   db_port: 5432
-  path: /home/karthikv/Work/hasura-dev/pgproxy/token_file
+  path: /path/to/token_file
+  template: host=##.db_host## port=##.db_port## dbname=##.db_name## user=##.db_user## password=##.password##
 
 .. other config
 ```
