@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
+	"github.com/hasura/hasura-secret-refresh/template"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
 )
@@ -23,6 +24,7 @@ type AWSIAMAuthRDSFile struct {
 	filePath        string
 	mu              *sync.Mutex
 	refreshInterval time.Duration
+	template        string
 	logger          zerolog.Logger
 }
 
@@ -113,6 +115,21 @@ func (provider AWSIAMAuthRDSFile) getSecret() (string, error) {
 	if err != nil {
 		provider.logger.Err(err).Msgf("error creating token :%s", err.Error())
 		return "", err
+	}
+	if provider.template != "" {
+		templ := template.Template{Templ: provider.template, Logger: provider.logger}
+		// template will be of the format
+		// host=##secret.host## port=##secret.port## dbname=##secret.db_name## user=##secret.db_user## password=##secret.password##
+		// and we need to build a JSON object representing the secret
+		secretJSON := fmt.Sprintf(`{
+		"db_host": "%s",
+		"db_port": %d,
+		"db_name": "%s",
+		"db_user": "%s",
+		"password": "%s"
+}`, provider.dbHost, provider.dbPort, provider.dbName, provider.dbUser, authenticationToken)
+
+		authenticationToken = templ.Substitute(secretJSON)
 	}
 
 	return authenticationToken, err
