@@ -41,7 +41,7 @@ func main() {
 
 	// accept an environment variable for config path
 	// and set the same as the config path
-	if configPath := os.Getenv("HASURA_SECRET_REFRESH_CONFIG_PATH"); configPath != "" {
+	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
 		viper.AddConfigPath(configPath)
 	}
 
