@@ -39,6 +39,12 @@ func main() {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
+	// accept an environment variable for config path
+	// and set the same as the config path
+	if configPath := os.Getenv("HASURA_SECRET_REFRESH_CONFIG_PATH"); configPath != "" {
+		viper.AddConfigPath(configPath)
+	}
+
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
