@@ -15,6 +15,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	ConfigFileCliFlag            = "config"
+	ConfigFileDefaultPath        = "./config.json"
+	ConfigFileCliFlagDescription = "path to config file"
+)
+
 type DeploymentType string
 
 const (
@@ -32,12 +38,11 @@ const (
 )
 
 func main() {
-	// Configure viper for environment-based config path routing
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
-	// Accept an environment variable for config path
+	// accept an environment variable for config path
 	// and set the same as the config path
 	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
 		viper.AddConfigPath(configPath)
@@ -93,6 +98,12 @@ func main() {
 	}
 	httpServer := server.Create(config, logger)
 	http.Handle("/", httpServer)
+
+	// add a healthcheck
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
 	refreshEndpoint := viper.GetString("refresh_config.endpoint")
 	if _, hasRefreshConfig := conf["refresh_config"]; hasRefreshConfig {
 		refreshConfig := make(map[string]provider.FileProvider)
@@ -216,5 +227,5 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 }
 
 func isDefaultPath(configPath string) bool {
-	return configPath == "./config.yaml" || configPath == "config.yaml"
+	return configPath == ConfigFileDefaultPath
 }
