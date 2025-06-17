@@ -95,6 +95,12 @@ func main() {
 	}
 	httpServer := server.Create(config, logger)
 	http.Handle("/", httpServer)
+
+	// add a healthcheck
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
 	refreshEndpoint := viper.GetString("refresh_config.endpoint")
 	if _, hasRefreshConfig := conf["refresh_config"]; hasRefreshConfig {
 		refreshConfig := make(map[string]provider.FileProvider)
