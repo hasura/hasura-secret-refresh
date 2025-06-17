@@ -1,8 +1,43 @@
+# IDE files
 .idea
+.vscode/
+
+# Build artifacts
+main
+hasura-secret-refresh
+hasura-secret-refresh-test
+
+# Test files and secrets
 scratch
 testsecret
 testsecretJson
 iam_db_secret
-main
 *.secret
+
+# Configuration files with credentials
 k_config.yaml
+config-azure-test.yaml
+test-config-azure.yaml.backup
+
+# Azure test files with real credentials
+testing/azure-key-vault/config-azure-test.yaml
+
+# Log files
+*.log
+service.log
+
+# Temporary files
+*.tmp
+*.temp
+test-invalid-config.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secret files in temp directories
+/tmp/test-*
+
+# AI-generated test directories (timestamped)
+azure-test-run-*
+e2e-test/azure-test-run-*

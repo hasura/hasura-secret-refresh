@@ -9,15 +9,10 @@ import (
 	awsIamRds "github.com/hasura/hasura-secret-refresh/provider/aws_iam_auth_rds"
 	awsSm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
 	awsSmOauth "github.com/hasura/hasura-secret-refresh/provider/aws_sm_oauth"
+	azureKv "github.com/hasura/hasura-secret-refresh/provider/azure_key_vault"
 	"github.com/hasura/hasura-secret-refresh/server"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
-)
-
-const (
-	ConfigFileCliFlag            = "config"
-	ConfigFileDefaultPath        = "./config.json"
-	ConfigFileCliFlagDescription = "path to config file"
 )
 
 type DeploymentType string
@@ -28,18 +23,21 @@ const (
 )
 
 const (
-	aws_secrets_manager = "proxy_aws_secrets_manager"
-	aws_sm_oauth        = "proxy_awssm_oauth"
-	aws_sm_file         = "file_aws_secrets_manager"
-	aws_iam_auth_rds    = "file_aws_iam_auth_rds"
+	aws_secrets_manager  = "proxy_aws_secrets_manager"
+	aws_sm_oauth         = "proxy_awssm_oauth"
+	aws_sm_file          = "file_aws_secrets_manager"
+	aws_iam_auth_rds     = "file_aws_iam_auth_rds"
+	azure_key_vault      = "proxy_azure_key_vault"
+	azure_key_vault_file = "file_azure_key_vault"
 )
 
 func main() {
+	// Configure viper for environment-based config path routing
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 
-	// accept an environment variable for config path
+	// Accept an environment variable for config path
 	// and set the same as the config path
 	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
 		viper.AddConfigPath(configPath)
@@ -95,12 +93,6 @@ func main() {
 	}
 	httpServer := server.Create(config, logger)
 	http.Handle("/", httpServer)
-
-	// add a healthcheck
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
 	refreshEndpoint := viper.GetString("refresh_config.endpoint")
 	if _, hasRefreshConfig := conf["refresh_config"]; hasRefreshConfig {
 		refreshConfig := make(map[string]provider.FileProvider)
@@ -198,6 +190,22 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 				return
 			}
 			fileProviders = append(fileProviders, iamProvider)
+		} else if providerType == azure_key_vault {
+			var provider_ provider.HttpProvider
+			provider_, err = azureKv.Create(providerData, sublogger)
+			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
+				return
+			}
+			config.Providers[k] = provider_
+		} else if providerType == azure_key_vault_file {
+			var fProvider_ provider.FileProvider
+			fProvider_, err = azureKv.CreateAzureKeyVaultFile(providerData, sublogger)
+			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
+				return
+			}
+			fileProviders = append(fileProviders, fProvider_)
 		} else {
 			err = fmt.Errorf("Unknown provider type '%s' specified for provider '%s'", providerType, k)
 			logger.Err(err).Msgf("Error in config")
@@ -208,5 +216,5 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 }
 
 func isDefaultPath(configPath string) bool {
-	return configPath == ConfigFileDefaultPath
+	return configPath == "./config.yaml" || configPath == "config.yaml"
 }
