@@ -37,12 +37,13 @@ const (
 func main() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
 
 	// accept an environment variable for config path
 	// and set the same as the config path
 	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
 		viper.AddConfigPath(configPath)
+	} else {
+		viper.AddConfigPath(".")
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
