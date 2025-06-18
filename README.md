@@ -125,7 +125,7 @@ Hasura secret refresher can be deployed as a sidecar or an init container (*defa
 2. Sidecar (sidecar) - for assisting the main container for its lifetime
 
 ## Configuration
-The Secrets Proxy requires a configuration file which contains configuration for secrets manager integration and other directives. The service expects the config file to be mounted at /config.yaml but the path can be changed by setting the environment variable `CONFIG_PATH`.
+The Secrets Proxy requires a configuration file which contains configuration for secrets manager integration and other directives. The service expects the config file to be mounted at root (i.e /config.yaml should be accessible) by default. But the path can be changed by setting the environment variable `CONFIG_PATH` or `CONFIG_FILE` set to absolute path to the config file.
 
 Note that config.yaml is checked at CONFIG_PATH/config.yaml if set otherwise at `/config.yaml`. 
 
