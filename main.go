@@ -40,12 +40,19 @@ const (
 func main() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
 
 	// accept an environment variable for config path
 	// and set the same as the config path
+	// DEPRECATION: this environment variable will be deprecated in future in favour
+	// of `CONFIG_FILE`
 	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
 		viper.AddConfigPath(configPath)
+	} else {
+		viper.AddConfigPath(".")
+	}
+
+	if configFile := os.Getenv("CONFIG_FILE"); configFile != "" {
+		viper.SetConfigFile(configFile)
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
