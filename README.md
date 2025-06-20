@@ -433,9 +433,6 @@ mongodb-prod-azure:
   path: /secret/MONGODB-PROD
   refresh: 60
   template: mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
-  client_id: "your-client-id"
-  client_secret: "your-client-secret"
-  tenant_id: "your-tenant-id"
 ```
 
 For example, if the secret in Azure Key Vault is defined as `{"username":"db_username","password":"secret_password","host":"127.0.0.1","port":"5432","dbname":"orders"}`, then for setting the MongoDB connection string, the template value is defined as `mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##`. Hence, the final secret that is written on the shared file will be `mongodb://db_username:secret_password@127.0.0.1:5432/orders`.
