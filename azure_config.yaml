@@ -1,0 +1,8 @@
+azure_api:
+  type: file_azure_key_vault
+  vault_url: "https://karthikvt26-hsm.vault.azure.net/"
+  secret_name: "api"
+  # path: /secrets/MONGODB-PROD
+  refresh: 60  # Refresh every 60 seconds
+  # Template to format the secret (optional)
+  # template: mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
