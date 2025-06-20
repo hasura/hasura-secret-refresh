@@ -11,6 +11,8 @@
   - [file_aws_secrets_manager](#file_aws_secrets_manager)
     - [Secret Rotation](#secret-rotation)
   - [file_aws_iam_auth_rds](#file_aws_iam_auth_rds)
+  - [proxy_azure_key_vault](#proxy_azure_key_vault)
+  - [file_azure_key_vault](#proxy_azure_key_vault)
 - [Actions/RS Configuration](#actionsrs-configuration)
 - [Data Source Configuration](#data-source-configuration)
   
@@ -395,13 +397,10 @@ Provider also supports token refresh at /refresh endpoint. Pass the file name to
 * `type`: Must always be "proxy_azure_key_vault"
 * `vault_url`: The URL of the Azure Key Vault. It must be a string representing a valid Azure Key Vault URL. eg: vault_url: "https://my-keyvault.vault.azure.net/"
 * `cache_ttl`: The secrets fetched from Azure Key Vault are cached. This parameter controls the TTL of that cache. It must be a number representing the number of seconds. eg. if the cache must be 5 minutes, the configuration would be cache_ttl: 300
-* `client_id` (optional): The client ID of the Azure service principal. Required when using service principal authentication.
-* `client_secret` (optional): The client secret of the Azure service principal. Required when using service principal authentication.
-* `tenant_id` (optional): The tenant ID of the Azure Active Directory. Required when using service principal authentication.
 
 **Authentication Methods:**
-1. **Service Principal with Client Secret**: Provide `client_id`, `client_secret`, and `tenant_id`
-2. **Managed Identity** (default): If no service principal credentials are provided, the provider will use Azure Managed Identity
+Checkout authentication methods supported [here](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet)
+
 
 #### Example Config
 ```
@@ -409,9 +408,6 @@ azure_actions_prod:
   type: proxy_azure_key_vault
   vault_url: "https://my-keyvault.vault.azure.net/"
   cache_ttl: 300
-  client_id: "your-client-id"
-  client_secret: "your-client-secret"
-  tenant_id: "your-tenant-id"
 ```
 
 ### file_azure_key_vault
@@ -424,13 +420,9 @@ For the type file_azure_key_vault, secrets proxy service will fetch the credenti
 * `secret_version` (optional): The specific version of the secret. If not provided, the latest version will be used
 * `path`: The file path where the secret will be stored. **Note**: The path should match the path specified in the shared volume mount. The filename should match the expected SECRET name by Hasura.
 * `template` (optional): The template of the secret which would be replaced by specific variables before writing to file. This field is optional if the raw secret value from Azure Key Vault needs to be used. [Click here](template/README.md) for details on the template format.
-* `client_id` (optional): The client ID of the Azure service principal. Required when using service principal authentication.
-* `client_secret` (optional): The client secret of the Azure service principal. Required when using service principal authentication.
-* `tenant_id` (optional): The tenant ID of the Azure Active Directory. Required when using service principal authentication.
 
 **Authentication Methods:**
-1. **Service Principal with Client Secret**: Provide `client_id`, `client_secret`, and `tenant_id`
-2. **Managed Identity** (default): If no service principal credentials are provided, the provider will use Azure Managed Identity
+Checkout authentication methods supported [here](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet)
 
 #### Example Config
 ```
@@ -503,7 +495,3 @@ This works well with the `file_aws_secrets_manager` and `file_azure_key_vault` p
     * Set template as `{"db_url": {{$vars.database_name}}}`
 
 Since the Secrets Proxy is set up with provider `file_aws_secrets_manager`, which has the path set as `/secrets/MONGODB_TEAMCCB_PROD_URL`, The connection string will be picked up, and the data source setup will be successful.
-
-
-
-
