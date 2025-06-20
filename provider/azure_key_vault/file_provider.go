@@ -98,35 +98,6 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 	// Create Azure credential
 	var cred azcore.TokenCredential
 
-	/*
-		// Try different authentication methods in order of preference
-		if clientId, hasClientId := config["client_id"].(string); hasClientId {
-			if clientSecret, hasClientSecret := config["client_secret"].(string); hasClientSecret {
-				if tenantId, hasTenantId := config["tenant_id"].(string); hasTenantId {
-					clientSecretCred, err := azidentity.NewClientSecretCredential(tenantId, clientId, clientSecret, nil)
-					if err != nil {
-						logger.Error().Err(err).Msg("azure_key_vault_file: Failed to create client secret credential")
-						return AzureKeyVaultFile{}, fmt.Errorf("failed to create credential")
-					}
-					cred = clientSecretCred
-				} else {
-					logger.Error().Msg("azure_key_vault_file: tenant_id is required when using client_id and client_secret")
-					return AzureKeyVaultFile{}, fmt.Errorf("config not valid")
-				}
-			} else {
-				logger.Error().Msg("azure_key_vault_file: client_secret is required when using client_id")
-				return AzureKeyVaultFile{}, fmt.Errorf("config not valid")
-			}
-		} else {
-			// Use Managed Identity as default
-			managedIdentityCred, err := azidentity.NewManagedIdentityCredential(nil)
-			if err != nil {
-				logger.Error().Err(err).Msg("azure_key_vault_file: Failed to create managed identity credential")
-				return AzureKeyVaultFile{}, fmt.Errorf("failed to create credential")
-			}
-			cred = managedIdentityCred
-		}
-	*/
 	// Create Azure credential using DefaultAzureCredential
 	// This will automatically try different authentication methods in sequence
 	defaultCred, err := azidentity.NewDefaultAzureCredential(nil)
@@ -236,5 +207,6 @@ func (provider AzureKeyVaultFile) writeFile(secretString string) error {
 		provider.logger.Err(err).Msgf("azure_key_vault_file: Error occurred while writing secret %s to file %s", provider.secretName, provider.filePath)
 		return err
 	}
+	provider.logger.Info().Msgf("azure_key_vault_file: Successfully wrote secret %s to file %s", provider.secretName, provider.filePath)
 	return nil
 }

@@ -17,6 +17,7 @@ iam_db_secret
 # Configuration files with credentials
 k_config.yaml
 config-azure-test.yaml
+azure_config.yaml
 test-config-azure.yaml.backup
 
 # Azure test files with real credentials
