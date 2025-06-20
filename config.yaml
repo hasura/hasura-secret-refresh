@@ -1,3 +1,11 @@
+azure_api:
+  type: file_azure_key_vault
+  vault_url: "https://karthikvt26-hsm.vault.azure.net/"
+  secret_name: "api"
+  secret_version: "c6f780b8313a4d3e97779672f3edb9d8"
+  path: api_secret
+  refresh: 3  # Refresh every 60 seconds
+
 aws_secrets_manager:
   type: "proxy_aws_secrets_manager"
   cache_ttl: 300

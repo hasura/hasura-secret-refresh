@@ -11,6 +11,8 @@
   - [file_aws_secrets_manager](#file_aws_secrets_manager)
     - [Secret Rotation](#secret-rotation)
   - [file_aws_iam_auth_rds](#file_aws_iam_auth_rds)
+  - [proxy_azure_key_vault](#proxy_azure_key_vault)
+  - [file_azure_key_vault](#proxy_azure_key_vault)
 - [Actions/RS Configuration](#actionsrs-configuration)
 - [Data Source Configuration](#data-source-configuration)
   
@@ -125,6 +127,39 @@ Hasura secret refresher can be deployed as a sidecar or an init container (*defa
 2. Sidecar (sidecar) - for assisting the main container for its lifetime
 
 ## Configuration
+The Secrets Proxy requires a configuration file which contains configuration for secrets manager integration and other directives.
+
+### Configuration File Location
+The service supports multiple ways to specify the configuration file:
+
+1. **Default Location**: The service looks for `config.yaml` in the current directory
+
+2. **Environment Variable** (recommended for custom locations): Set the `CONFIG_PATH` environment variable to specify the directory containing `config.yaml`:
+   ```bash
+   export CONFIG_PATH=/path/to/config/directory
+   ./hasura-secret-refresh
+   ```
+
+3. **Docker/Kubernetes**: Mount the config file at `/config.yaml` or set `CONFIG_PATH` environment variable
+
+### Usage Examples
+```bash
+# Using default location
+cp my-config.yaml config.yaml
+./hasura-secret-refresh
+
+# Using environment variable (recommended for custom locations)
+export CONFIG_PATH=/etc/hasura-secrets
+./hasura-secret-refresh
+
+# Using environment variable with specific config directory
+export CONFIG_PATH=/path/to/azure-configs
+./hasura-secret-refresh
+
+# Reset environment variable when done
+unset CONFIG_PATH
+```
+
 The Secrets Proxy requires a configuration file which contains configuration for secrets manager integration and other directives. The service expects the config file to be mounted at root (i.e /config.yaml should be accessible) by default. But the path can be changed by setting the environment variable `CONFIG_PATH` or `CONFIG_FILE` set to absolute path to the config file.
 
 Note that config.yaml is checked at CONFIG_PATH/config.yaml if set otherwise at `/config.yaml`. 
@@ -174,10 +209,12 @@ data:
 
 The Secrets Proxy supports multiple mechanisms of fetching and injecting secrets for any number of use cases and integrations.
 
-Each section of the configuration is backed by a type of provider. There are 3 types of providers currently supported: 
+Each section of the configuration is backed by a type of provider. There are 5 types of providers currently supported:
 1. `proxy_awssm_oauth`
 2. `file_aws_secrets_manager`
 3. `file_aws_iam_auth_rds`
+4. `proxy_azure_key_vault`
+5. `file_azure_key_vault`
 
 Any provider starting with `proxy_` is the type which acts as a forward proxy for credential injections to Actions and Remote Schemas.
 
@@ -187,10 +224,10 @@ The config file follows the following format
 
 ```
 <config-name-for-an-integration-1>:
-	type: proxy_awssm_oauth | file_aws_secrets_manager
+	type: proxy_awssm_oauth | file_aws_secrets_manager | proxy_azure_key_vault | file_azure_key_vault
 	…<other provider_configs>
 <config-name-for-an-integration-2>:
-	type: proxy_awssm_oauth | file_aws_secrets_manager
+	type: proxy_awssm_oauth | file_aws_secrets_manager | proxy_azure_key_vault | file_azure_key_vault
 	…<other provider_configs>
 …
 ```
@@ -354,10 +391,64 @@ aws_iam_auth_rds:
 #### Secret Rotation
 Provider also supports token refresh at /refresh endpoint. Pass the file name to trigger a refresh
 
+### proxy_azure_key_vault
+`proxy_azure_key_vault` is a proxy type of provider that fetches secrets from Azure Key Vault for Actions and Remote Schemas. The configuration parameters are:
+
+* `type`: Must always be "proxy_azure_key_vault"
+* `vault_url`: The URL of the Azure Key Vault. It must be a string representing a valid Azure Key Vault URL. eg: vault_url: "https://my-keyvault.vault.azure.net/"
+* `cache_ttl`: The secrets fetched from Azure Key Vault are cached. This parameter controls the TTL of that cache. It must be a number representing the number of seconds. eg. if the cache must be 5 minutes, the configuration would be cache_ttl: 300
+
+**Authentication Methods:**
+Checkout authentication methods supported [here](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet)
+
+
+#### Example Config
+```
+azure_actions_prod:
+  type: proxy_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  cache_ttl: 300
+```
+
+### file_azure_key_vault
+For the type file_azure_key_vault, secrets proxy service will fetch the credentials from Azure Key Vault and write to a file which is mounted on a shared volume between Hasura Data Plane and the Secrets proxy. This is to be used for Azure Key Vault based integration with Data Sources. The configuration parameters are:
+
+* `type`: Must always be "file_azure_key_vault"
+* `vault_url`: The URL of the Azure Key Vault. It must be a string representing a valid Azure Key Vault URL. eg: vault_url: "https://my-keyvault.vault.azure.net/"
+* `refresh`: Refresh interval after which secrets management service should refetch the secret. E.g. 60 (seconds)
+* `secret_name`: The name of the secret in Azure Key Vault
+* `secret_version` (optional): The specific version of the secret. If not provided, the latest version will be used
+* `path`: The file path where the secret will be stored. **Note**: The path should match the path specified in the shared volume mount. The filename should match the expected SECRET name by Hasura.
+* `template` (optional): The template of the secret which would be replaced by specific variables before writing to file. This field is optional if the raw secret value from Azure Key Vault needs to be used. [Click here](template/README.md) for details on the template format.
+
+**Authentication Methods:**
+Checkout authentication methods supported [here](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet)
+
+#### Example Config
+```
+mongodb-prod-azure:
+  type: file_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  secret_name: "mongodb-connection-string"
+  path: /secret/MONGODB-PROD
+  refresh: 60
+  template: mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+```
+
+For example, if the secret in Azure Key Vault is defined as `{"username":"db_username","password":"secret_password","host":"127.0.0.1","port":"5432","dbname":"orders"}`, then for setting the MongoDB connection string, the template value is defined as `mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##`. Hence, the final secret that is written on the shared file will be `mongodb://db_username:secret_password@127.0.0.1:5432/orders`.
+
+**Note**: If the template key is omitted, then the entire value from Azure Key Vault will be written to the mounted file.
+
+#### Secret Rotation
+The provider `file_azure_key_vault` works in conjunction with the Dynamic Secrets From File feature in Hasura. If the credentials are changed in Azure Key Vault, following behavior is expected:
+* The refresh parameter will make sure that max within the `<refresh>` time, the secret is re-fetched and updated in the local cache.
+* When Hasura encounters an Auth error with a downstream database (say, due to old credentials), Hasura will re-read the credentials from the shared secret file and retry the request. If Secrets Proxy has already updated the secret as per the refresh policy, Hasura will pick up the new credential and retry the request.
+* Since Secrets Proxy has a refresh interval, the new secret pull may take time. In worst case scenario, the request to the database may fail till next refresh happens (e.g. 60 secs).
+
 ## Actions/RS Configuration
 Once the Secrets Proxy is configured, Actions/RS needs to be set in a particular manner in Hasura in order to get the pass the relevant parameters for the integration.
 
-**Note**: For integration with Actions/RS, only 1 provider is implemented as of now `proxy_awssm_oauth`. Make sure Secrets Proxy configuration has this provider setup.
+**Note**: For integration with Actions/RS, there are 2 providers implemented: `proxy_awssm_oauth` and `proxy_azure_key_vault`. Make sure Secrets Proxy configuration has one of these providers setup.
 
 1. Follow this [quick guide](https://hasura.io/docs/latest/actions/quickstart/) to set up a Hasura action. (Note, same steps to be taken for Remote Schema integration too).
 2. The Action webhook handler/RS Endpoint needs to be always set to http://localhost:5353 where the Secrets proxy would be running as a sidecar. **Note**:
@@ -372,13 +463,19 @@ Once the Secrets Proxy is configured, Actions/RS needs to be set in a particular
 * `X-Hasura-Backend-Id`: Resource id to be passed in the OAuth request
 * `X-Hasura-Private-Key-Id`: The key with which the RSA private key is stored in AWS Secrets Manager. This private key will be used to sign the JWT token sent to the OAuth endpoint.
 
+#### For Azure Key Vault Provider (proxy_azure_key_vault)
+When using the `proxy_azure_key_vault` provider, use these headers instead:
+* `X-Hasura-Forward-To`: Same as above - the downstream service URL
+* `X-Hasura-Secret-Header`: Same as above - the header template for the backend service
+* `X-Hasura-Secret-Provider`: Set this to the name of your Azure Key Vault provider configuration (e.g., `azure_actions_prod`)
+* `X-Hasura-Secret-Name`: The name of the secret in Azure Key Vault that contains the access token
 
 Requests going through the action now will go through the Secrets Proxy ensuring the request headers have been transformed to pick up correct Authorization values in its header.
 
 ## Data Source Configuration
 Hasura, starting from v2.35.0 supports a new way of injecting secrets: "Dynamic Secrets From File". This is similar to From Env Var configurations while setting up Data Sources in Hasura. The difference is that Dynamic Secrets From File picks the secrets from a local file instead of an environment variable. 
 
-This works well with the `file_aws_secrets_manager` provider of the Secrets Proxy.
+This works well with the `file_aws_secrets_manager` and `file_azure_key_vault` providers of the Secrets Proxy.
 
 ### Postgres and CockroachDB
 
@@ -395,7 +492,3 @@ This works well with the `file_aws_secrets_manager` provider of the Secrets Prox
     * Set template as `{"db_url": {{$vars.database_name}}}`
 
 Since the Secrets Proxy is set up with provider `file_aws_secrets_manager`, which has the path set as `/secrets/MONGODB_TEAMCCB_PROD_URL`, The connection string will be picked up, and the data source setup will be successful.
-
-
-
-

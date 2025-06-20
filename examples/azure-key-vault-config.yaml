@@ -1,0 +1,96 @@
+# Example configuration for Azure Key Vault integration
+# This file demonstrates how to configure the Hasura Secrets Proxy
+# to work with Azure Key Vault for both Actions/Remote Schemas and Data Sources
+
+# Log configuration
+log_config:
+  level: "info"
+
+# Refresh endpoint configuration (optional)
+refresh_config:
+  endpoint: "/refresh"
+
+# Azure Key Vault provider for Actions and Remote Schemas
+# This provider fetches secrets from Azure Key Vault and injects them
+# into HTTP headers for Actions and Remote Schemas
+azure_actions_prod:
+  type: proxy_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  cache_ttl: 300  # Cache secrets for 5 minutes
+  # Authentication using Service Principal (optional)
+  client_id: "your-service-principal-client-id"
+  client_secret: "your-service-principal-client-secret"
+  tenant_id: "your-azure-tenant-id"
+  # If the above are not provided, Managed Identity will be used
+
+# Azure Key Vault provider for MongoDB Data Source
+# This provider fetches connection strings from Azure Key Vault
+# and writes them to a file for Hasura to read
+mongodb-prod-azure:
+  type: file_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  secret_name: "mongodb-connection-string"
+  path: /secrets/MONGODB-PROD
+  refresh: 60  # Refresh every 60 seconds
+  # Template to format the secret (optional)
+  template: mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+  # Authentication using Service Principal (optional)
+  client_id: "your-service-principal-client-id"
+  client_secret: "your-service-principal-client-secret"
+  tenant_id: "your-azure-tenant-id"
+
+# Azure Key Vault provider for PostgreSQL Data Source
+postgres-prod-azure:
+  type: file_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  secret_name: "postgres-connection-string"
+  path: /secrets/POSTGRES-PROD
+  refresh: 60
+  # Template for PostgreSQL connection string
+  template: postgresql://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+  # Using Managed Identity (no explicit credentials)
+
+# Azure Key Vault provider for Oracle Data Source
+oracle-prod-azure:
+  type: file_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  secret_name: "oracle-connection-string"
+  path: /secrets/ORACLE-PROD
+  refresh: 60
+  # Template for Oracle JDBC connection string
+  template: jdbc:oracle:thin:##secret.username##/##secret.password##@##secret.host##:##secret.port##:##secret.service_name##
+
+# Azure Key Vault provider for API tokens (no template)
+api-tokens-azure:
+  type: file_azure_key_vault
+  vault_url: "https://my-keyvault.vault.azure.net/"
+  secret_name: "api-bearer-token"
+  path: /secrets/API-TOKEN
+  refresh: 300  # Refresh every 5 minutes
+  # No template - use raw secret value
+
+# Mixed configuration with both AWS and Azure providers
+# This shows how you can use multiple secret providers in the same configuration
+
+# AWS Secrets Manager for comparison
+mongodb-staging-aws:
+  type: file_aws_secrets_manager
+  region: "us-west-2"
+  secret_id: "mongodb-staging-connection"
+  path: /secrets/MONGODB-STAGING
+  refresh: 60
+  template: mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+
+# AWS OAuth provider for comparison
+aws_oauth_actions:
+  type: proxy_awssm_oauth
+  certificate_cache_ttl: 300
+  certificate_region: "us-west-2"
+  token_cache_ttl: 300
+  token_cache_size: 10
+  oauth_url: "https://oauth.example.com/token"
+  jwt_claims_map: '{"iss":"hasura","sub":"actions"}'
+  jwt_duration: 300
+  http_retry_attempts: 3
+  http_retry_min_wait: 1
+  http_retry_max_wait: 10
