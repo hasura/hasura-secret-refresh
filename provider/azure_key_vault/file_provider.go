@@ -30,7 +30,7 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 	vaultUrlI, found := config["vault_url"]
 	if !found {
 		logger.Error().Msg("azure_key_vault_file: Config 'vault_url' not found")
-		return AzureKeyVaultFile{}, fmt.Errorf("required configs not found")
+		return AzureKeyVaultFile{}, fmt.Errorf("azure_key_vault_file: required config 'vault_url' not found")
 	}
 	vaultUrl, ok := vaultUrlI.(string)
 	if !ok {
