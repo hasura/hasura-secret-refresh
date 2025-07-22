@@ -305,11 +305,21 @@ For the type file_aws_secrets_manager, secrets manager proxy service will try to
 * `secret_id`: The identifier with which the secret is stored on AWS Secret Management. Note: This can be the ASE Secret ID, or the full ARN string for the secret.
 * `path`: The file path where to which the secret will be stored. **Note**: The path should match the path specified in the shared volume mount. The filename should match the expected SECRET name by Hasura.
 * `template`: The template of the secret which would be replaced by specific variables before writing to file. This field is optional if the raw secret value from AWS Secrets Manager needs to be used. [Click here](template/README.md) for details on the template format.
+* `key_mapper`: an optional secret name mapper
 
 For example, 
 If the secret in AWS Secret manager is defined as `{"username":"db_username","password":"secret_password","host":"127.0.0.1","port":"5432","dbname":"orders"}`
 Then for setting the jdbc url as the database connection string that Hasura reads, the template value is defined as `jdbc://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##`
 Hence, the final secret that is written on the shared file will be `jdbc://db_username:secret_password@127.0.0.1:5432/orders`
+
+Key mapper,
+If the secret in AWS Secret Manager is defined as `{"DATA_ADMIN_SECRET": "randomsecret"}` and the key mapper is defined as below
+```
+  key_mapper:
+    "DATA_ADMIN_SECRET": HASURA_GRAPHQL_ADMIN_SECRET
+```
+
+then the final secret that is written into a file will be `{"HASURA_GRAPHQL_ADMIN_SECRET": "randomsecret"}`. Note that the keys are case-insensitive,
 
 **Note**: If the template key is omitted, then the entire json from AWS secret manager will be written to the mounted file.
 
