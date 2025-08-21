@@ -65,7 +65,7 @@ func ParseSecretTransformFromConfig(config map[string]interface{}, logger zerolo
 	secretTransformConfig, ok := secretTransformI.(map[string]interface{})
 	if !ok {
 		logger.Error().Msg("'transform' must be an object")
-		return nil, fmt.Errorf("config not valid")
+		return nil, fmt.Errorf("config not valid: 'transform' must be an object")
 	}
 
 	// Parse mode
@@ -73,7 +73,7 @@ func ParseSecretTransformFromConfig(config map[string]interface{}, logger zerolo
 		modeStr, ok := modeI.(string)
 		if !ok {
 			logger.Error().Msg("transform.mode must be a string")
-			return nil, fmt.Errorf("config not valid")
+			return nil, fmt.Errorf("config not valid: transform.mode must be a string")
 		}
 
 		switch modeStr {
@@ -83,7 +83,7 @@ func ParseSecretTransformFromConfig(config map[string]interface{}, logger zerolo
 			mode = TransformModeTransformedOnly
 		default:
 			logger.Error().Msgf("invalid mode '%s', must be 'keep_all' or 'transformed_only'", modeStr)
-			return nil, fmt.Errorf("config not valid")
+			return nil, fmt.Errorf("config not valid: invalid mode '%s', must be 'keep_all' or 'transformed_only'")
 		}
 	}
 
@@ -96,14 +96,14 @@ func ParseSecretTransformFromConfig(config map[string]interface{}, logger zerolo
 	keyMappingsList, ok := keyMappingsI.([]interface{})
 	if !ok {
 		logger.Error().Msg("'transform.key_mappings' must be a list")
-		return nil, fmt.Errorf("config not valid")
+		return nil, fmt.Errorf("config not valid: transform.key_mappings must be a list")
 	}
 
 	for i, mappingI := range keyMappingsList {
 		mappingMap, ok := mappingI.(map[string]interface{})
 		if !ok {
 			logger.Error().Msgf("transform.key_mappings[%d] must be an object", i)
-			return nil, fmt.Errorf("config not valid")
+			return nil, fmt.Errorf("config not valid: transform.key_mappings[%d] must be an object")
 		}
 
 		fromI, hasFrom := mappingMap["from"]
@@ -111,19 +111,19 @@ func ParseSecretTransformFromConfig(config map[string]interface{}, logger zerolo
 
 		if !hasFrom || !hasTo {
 			logger.Error().Msgf("transform.key_mappings[%d] must have both 'from' and 'to' fields", i)
-			return nil, fmt.Errorf("config not valid")
+			return nil, fmt.Errorf("config not valid: transform.key_mappings[%d] must have both 'from' and 'to' fields")
 		}
 
 		from, ok := fromI.(string)
 		if !ok {
 			logger.Error().Msgf("transform.key_mappings[%d].from must be a string", i)
-			return nil, fmt.Errorf("config not valid")
+			return nil, fmt.Errorf("config not valid: transform.key_mappings[%d].from must be a string", i)
 		}
 
 		to, ok := toI.(string)
 		if !ok {
 			logger.Error().Msgf("transform.key_mappings[%d].to must be a string", i)
-			return nil, fmt.Errorf("config not valid")
+			return nil, fmt.Errorf("config not valid: transform.key_mappings[%d].to must be a string", i)
 		}
 
 		keyMappings = append(keyMappings, KeyMapping{
@@ -211,6 +211,9 @@ func (st *SecretTransform) Transform(secretString string) (string, error) {
 
 // HasTransformations returns true if the transformer has any key mappings configured
 func (st *SecretTransform) HasTransformations() bool {
+	if st == nil {
+		return false
+	}
 	return len(st.mappings) > 0
 }
 

@@ -14,9 +14,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type SecretsManagerInterface interface {
+	GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+}
+
 type AwsSecretsManagerFile struct {
 	refreshInterval time.Duration
-	secretsManager  *secretsmanager.SecretsManager
+	secretsManager  SecretsManagerInterface
 	filePath        string
 	secretId        string
 	template        string
