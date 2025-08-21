@@ -87,6 +87,10 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 	if err != nil {
 		return AwsSecretsManagerFile{}, err
 	}
+	if secretTemplate != "" && secretTransform.HasTransformations() {
+		logger.Error().Msg("aws_secrets_manager_file: Only one of 'template' or 'secret_transform' can be configured, not both")
+		return AwsSecretsManagerFile{}, fmt.Errorf("config not valid: Only one of 'template' or 'transform' can be configured, not both")
+	}
 	awsSm := AwsSecretsManagerFile{
 		refreshInterval: refreshInterval,
 		filePath:        filePath,
@@ -171,6 +175,7 @@ func (provider AwsSecretsManagerFile) getSecret() (string, error) {
 		templ := template.Template{Templ: provider.template, Logger: provider.logger}
 		secretString = templ.Substitute(secretString)
 	}
+
 	return secretString, nil
 }
 

@@ -102,6 +102,11 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 		return AzureKeyVaultFile{}, err
 	}
 
+	if secretTemplate != "" && secretTransform.HasTransformations() {
+		logger.Error().Msg("azure_key_vault_file: Only one of 'template' or 'secret_transform' can be configured, not both")
+		return AzureKeyVaultFile{}, fmt.Errorf("config not valid: Only one of 'template' or 'transform' can be configured, not both")
+	}
+
 	// Create Azure credential
 	var cred azcore.TokenCredential
 
