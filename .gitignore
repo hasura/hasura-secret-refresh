@@ -10,6 +10,9 @@ hasura-secret-refresh-test
 # Test files and secrets
 scratch
 testsecret
+api_secret
+api_secret_transformed_only
+testsecretTransformedJson
 testsecretJson
 iam_db_secret
 *.secret

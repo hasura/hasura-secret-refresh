@@ -1,10 +1,8 @@
 package aws_secrets_manager
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/hasura/hasura-secret-refresh/template"
+	"github.com/hasura/hasura-secret-refresh/transform"
 	"github.com/rs/zerolog"
 )
 
@@ -21,10 +20,7 @@ type AwsSecretsManagerFile struct {
 	filePath        string
 	secretId        string
 	template        string
-	// i would like to implement a mapper
-	// that would map secret key to a new key
-	// what would that be?
-	keyMapper map[string]string
+	secretTransform *transform.SecretTransform
 
 	logger zerolog.Logger
 	mu     *sync.Mutex
@@ -87,24 +83,9 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 			return AwsSecretsManagerFile{}, fmt.Errorf("config not valid")
 		}
 	}
-
-	// Add key mapper configuration
-	keyMapper := make(map[string]string)
-	keyMapperI, found := config["key_mapper"]
-	if found {
-		keyMapperConfig, ok := keyMapperI.(map[string]interface{})
-		if !ok {
-			logger.Error().Msg("aws_secrets_manager_file: 'key_mapper' must be a map")
-			return AwsSecretsManagerFile{}, fmt.Errorf("config not valid")
-		}
-		for oldKey, newKeyI := range keyMapperConfig {
-			newKey, ok := newKeyI.(string)
-			if !ok {
-				logger.Error().Msgf("aws_secrets_manager_file: key_mapper value for '%s' must be a string", oldKey)
-				return AwsSecretsManagerFile{}, fmt.Errorf("config not valid")
-			}
-			keyMapper[oldKey] = newKey
-		}
+	secretTransform, err := transform.ParseSecretTransformFromConfig(config, logger)
+	if err != nil {
+		return AwsSecretsManagerFile{}, err
 	}
 	awsSm := AwsSecretsManagerFile{
 		refreshInterval: refreshInterval,
@@ -113,13 +94,15 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 		secretId:        secretId,
 		logger:          logger,
 		template:        secretTemplate,
-		keyMapper:       keyMapper,
+		secretTransform: secretTransform,
 		mu:              &sync.Mutex{},
 	}
 	logger.Info().
 		Str("refresh", refreshInterval.String()).
 		Str("file_path", filePath).
 		Str("secret_id", secretId).
+		Int("key_mappings", len(secretTransform.GetMappings())).
+		Str("transform_mode", string(secretTransform.GetMode())).
 		Msg("Creating provider")
 	return awsSm, err
 }
@@ -177,10 +160,10 @@ func (provider AwsSecretsManagerFile) getSecret() (string, error) {
 	secretString := *res.SecretString
 
 	// Apply key mapping if configured
-	if len(provider.keyMapper) > 0 {
-		secretString, err = provider.applyKeyMapping(secretString)
+	if provider.secretTransform.HasTransformations() {
+		secretString, err = provider.secretTransform.Transform(secretString)
 		if err != nil {
-			provider.logger.Err(err).Msg("aws_secrets_manager_file: Error applying key mapping")
+			provider.logger.Err(err).Msg("aws_secrets_manager_file: Error applying secret transformation")
 			return "", err
 		}
 	}
@@ -200,44 +183,4 @@ func (provider AwsSecretsManagerFile) writeFile(secretString string) error {
 		return err
 	}
 	return nil
-}
-
-// Add this new method
-func (provider AwsSecretsManagerFile) applyKeyMapping(secretString string) (string, error) {
-	var secretData map[string]interface{}
-	err := json.Unmarshal([]byte(secretString), &secretData)
-	if err != nil {
-		provider.logger.Err(err).Msg("aws_secrets_manager_file: Failed to parse secret as JSON for key mapping")
-		return secretString, nil // Return original if not JSON
-	}
-
-	mappedData := make(map[string]interface{})
-	for originalKey, value := range secretData {
-		mapped := false
-		if newKey, exists := provider.keyMapper[originalKey]; exists {
-			mappedData[newKey] = value
-			provider.logger.Debug().Msgf("aws_secrets_manager_file: Mapped key '%s' to '%s'", originalKey, newKey)
-		} else {
-			// Try lowercase match for case-insensitive mapping
-			for mapperKey, newKey := range provider.keyMapper {
-				if strings.ToLower(mapperKey) == strings.ToLower(originalKey) {
-					mappedData[newKey] = value
-					provider.logger.Debug().Msgf("aws_secrets_manager_file: Mapped key '%s' to '%s' (case-insensitive)", originalKey, newKey)
-					mapped = true
-					break
-				}
-			}
-		}
-		if !mapped {
-			mappedData[originalKey] = value
-		}
-	}
-
-	mappedBytes, err := json.Marshal(mappedData)
-	if err != nil {
-		provider.logger.Err(err).Msg("aws_secrets_manager_file: Failed to marshal mapped secret data")
-		return "", err
-	}
-
-	return string(mappedBytes), nil
 }

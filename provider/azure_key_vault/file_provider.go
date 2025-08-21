@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/hasura/hasura-secret-refresh/template"
+	"github.com/hasura/hasura-secret-refresh/transform"
 	"github.com/rs/zerolog"
 )
 
@@ -21,6 +22,7 @@ type AzureKeyVaultFile struct {
 	secretName      string
 	secretVersion   string
 	template        string
+	secretTransform *transform.SecretTransform
 	logger          zerolog.Logger
 	mu              *sync.Mutex
 }
@@ -95,6 +97,11 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 		}
 	}
 
+	secretTransform, err := transform.ParseSecretTransformFromConfig(config, logger)
+	if err != nil {
+		return AzureKeyVaultFile{}, err
+	}
+
 	// Create Azure credential
 	var cred azcore.TokenCredential
 
@@ -121,6 +128,7 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 		secretName:      secretName,
 		secretVersion:   secretVersion,
 		logger:          logger,
+		secretTransform: secretTransform,
 		template:        secretTemplate,
 		mu:              &sync.Mutex{},
 	}
@@ -130,6 +138,8 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 		Str("file_path", filePath).
 		Str("secret_name", secretName).
 		Str("vault_url", vaultUrl).
+		Int("transformations", len(secretTransform.GetMappings())).
+		Str("transform_mode", string(secretTransform.GetMode())).
 		Msg("Creating Azure Key Vault file provider")
 
 	return azureKv, nil
@@ -192,6 +202,14 @@ func (provider AzureKeyVaultFile) getSecret() (string, error) {
 	}
 
 	secretString := *resp.Value
+	// Apply key mapping if configured
+	if provider.secretTransform.HasTransformations() {
+		secretString, err = provider.secretTransform.Transform(secretString)
+		if err != nil {
+			provider.logger.Err(err).Msg("azure_key_vault_file: Error applying secret transformation")
+			return "", err
+		}
+	}
 	if provider.template != "" {
 		templ := template.Template{Templ: provider.template, Logger: provider.logger}
 		secretString = templ.Substitute(secretString)
