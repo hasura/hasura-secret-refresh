@@ -1,0 +1,77 @@
+name: Build and scan services
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * *" # Daily midnight
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix information
+        uses: actions/github-script@v3
+        id: set-matrix
+        with:
+          script: |
+            var services = [
+              {
+                name: 'hasura-secret-refresher',
+                dockerContextPath: '.',
+                dockerFilePath: 'Dockerfile'
+              }
+            ];
+            core.setOutput('matrix', JSON.stringify(services));
+
+  build-and-scan:
+    name: ${{ matrix.service.name }}
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.setup.outputs.matrix) }}
+      fail-fast: false
+    permissions:
+      contents: "read"
+      actions: "read"
+      packages: "read"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.service.name }}
+        env:
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          echo "Building ${{ matrix.service.name }}"
+          export TAG="${GITHUB_SHA::8}"
+          docker build -t "hasura-secret-refresher:${TAG}" -f ${{ matrix.service.dockerFilePath }} ${{ matrix.service.dockerContextPath }}
+          DOCKER_IMG="hasura-secret-refresher:${TAG}"
+          echo "DOCKER_IMG = $DOCKER_IMG"
+          echo "DOCKER_IMG=${DOCKER_IMG}" >> $GITHUB_ENV
+
+      - name: Run Trivy vulnerability scanner (json output)
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: ${{ env.DOCKER_IMG }}
+          format: json
+          output: trivy-results.json
+          scanners: vuln
+
+      - name: Fail build on High/Critical Vulnerabilities
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          skip-setup-trivy: true # setup was already done by the previous call to this action above
+          image-ref: ${{ env.DOCKER_IMG }}
+          format: table
+          severity: "CRITICAL,HIGH"
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: 1
+
