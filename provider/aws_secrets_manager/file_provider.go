@@ -10,17 +10,24 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/hasura/hasura-secret-refresh/template"
+	"github.com/hasura/hasura-secret-refresh/transform"
 	"github.com/rs/zerolog"
 )
 
+type SecretsManagerInterface interface {
+	GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+}
+
 type AwsSecretsManagerFile struct {
 	refreshInterval time.Duration
-	secretsManager  *secretsmanager.SecretsManager
+	secretsManager  SecretsManagerInterface
 	filePath        string
 	secretId        string
 	template        string
-	logger          zerolog.Logger
-	mu              *sync.Mutex
+	secretTransform *transform.SecretTransform
+
+	logger zerolog.Logger
+	mu     *sync.Mutex
 }
 
 func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.Logger) (AwsSecretsManagerFile, error) {
@@ -80,6 +87,14 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 			return AwsSecretsManagerFile{}, fmt.Errorf("config not valid")
 		}
 	}
+	secretTransform, err := transform.ParseSecretTransformFromConfig(config, logger)
+	if err != nil {
+		return AwsSecretsManagerFile{}, err
+	}
+	if secretTemplate != "" && secretTransform.HasTransformations() {
+		logger.Error().Msg("aws_secrets_manager_file: Only one of 'template' or 'secret_transform' can be configured, not both")
+		return AwsSecretsManagerFile{}, fmt.Errorf("config not valid: Only one of 'template' or 'transform' can be configured, not both")
+	}
 	awsSm := AwsSecretsManagerFile{
 		refreshInterval: refreshInterval,
 		filePath:        filePath,
@@ -87,12 +102,15 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 		secretId:        secretId,
 		logger:          logger,
 		template:        secretTemplate,
+		secretTransform: secretTransform,
 		mu:              &sync.Mutex{},
 	}
 	logger.Info().
 		Str("refresh", refreshInterval.String()).
 		Str("file_path", filePath).
 		Str("secret_id", secretId).
+		Int("key_mappings", len(secretTransform.GetMappings())).
+		Str("transform_mode", string(secretTransform.GetMode())).
 		Msg("Creating provider")
 	return awsSm, err
 }
@@ -148,10 +166,20 @@ func (provider AwsSecretsManagerFile) getSecret() (string, error) {
 		return "", err
 	}
 	secretString := *res.SecretString
+
+	// Apply key mapping if configured
+	if provider.secretTransform.HasTransformations() {
+		secretString, err = provider.secretTransform.Transform(secretString)
+		if err != nil {
+			provider.logger.Err(err).Msg("aws_secrets_manager_file: Error applying secret transformation")
+			return "", err
+		}
+	}
 	if provider.template != "" {
 		templ := template.Template{Templ: provider.template, Logger: provider.logger}
 		secretString = templ.Substitute(secretString)
 	}
+
 	return secretString, nil
 }
 

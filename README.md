@@ -305,11 +305,28 @@ For the type file_aws_secrets_manager, secrets manager proxy service will try to
 * `secret_id`: The identifier with which the secret is stored on AWS Secret Management. Note: This can be the ASE Secret ID, or the full ARN string for the secret.
 * `path`: The file path where to which the secret will be stored. **Note**: The path should match the path specified in the shared volume mount. The filename should match the expected SECRET name by Hasura.
 * `template`: The template of the secret which would be replaced by specific variables before writing to file. This field is optional if the raw secret value from AWS Secrets Manager needs to be used. [Click here](template/README.md) for details on the template format.
+* `transform` (optional): A transformation configuration that allows remapping of JSON keys in the secret value before writing to file. This enables renaming keys from the Azure Key Vault secret to match the expected format. The transform supports two modes: `keep_all` (keeps original keys plus transformed ones) and `transformed_only` (keeps only the transformed keys). If not specified, the secret keys will remain unchanged. **Note**: Only one of `template` or `transform` can be configured, not both.
 
 For example, 
 If the secret in AWS Secret manager is defined as `{"username":"db_username","password":"secret_password","host":"127.0.0.1","port":"5432","dbname":"orders"}`
 Then for setting the jdbc url as the database connection string that Hasura reads, the template value is defined as `jdbc://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##`
 Hence, the final secret that is written on the shared file will be `jdbc://db_username:secret_password@127.0.0.1:5432/orders`
+
+Key mapper,
+If the secret in AWS Secret Manager is defined as `{"DATA_ADMIN_SECRET": "randomsecret"}` and the key mapper is defined as below
+```
+  transform:
+    mode: "transformed_only"  # or "keep_all"
+    key_mappings:
+      - from: "db_user"
+        to: "username"
+      - from: "db_pass"
+        to: "password"
+      - from: "db_hostname"
+        to: "host"
+```
+
+In this example, if the Azure Key Vault secret contains `{"db_user": "admin", "db_pass": "secret123", "db_hostname": "localhost"}`, the transform will rename the keys to `{"username": "admin", "password": "secret123", "host": "localhost"}` before applying the template.
 
 **Note**: If the template key is omitted, then the entire json from AWS secret manager will be written to the mounted file.
 
@@ -420,6 +437,7 @@ For the type file_azure_key_vault, secrets proxy service will fetch the credenti
 * `secret_version` (optional): The specific version of the secret. If not provided, the latest version will be used
 * `path`: The file path where the secret will be stored. **Note**: The path should match the path specified in the shared volume mount. The filename should match the expected SECRET name by Hasura.
 * `template` (optional): The template of the secret which would be replaced by specific variables before writing to file. This field is optional if the raw secret value from Azure Key Vault needs to be used. [Click here](template/README.md) for details on the template format.
+* `transform` (optional): A transformation configuration that allows remapping of JSON keys in the secret value before writing to file. This enables renaming keys from the Azure Key Vault secret to match the expected format. The transform supports two modes: `keep_all` (keeps original keys plus transformed ones) and `transformed_only` (keeps only the transformed keys). If not specified, the secret keys will remain unchanged. **Note**: Only one of `template` or `transform` can be configured, not both.
 
 **Authentication Methods:**
 Checkout authentication methods supported [here](https://learn.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet)
@@ -433,7 +451,18 @@ mongodb-prod-azure:
   path: /secret/MONGODB-PROD
   refresh: 60
   template: mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##
+  transform:
+    mode: "transformed_only"  # or "keep_all"
+    key_mappings:
+      - from: "db_user"
+        to: "username"
+      - from: "db_pass"
+        to: "password"
+      - from: "db_hostname"
+        to: "host"
 ```
+
+In this example, if the Azure Key Vault secret contains `{"db_user": "admin", "db_pass": "secret123", "db_hostname": "localhost"}`, the transform will rename the keys to `{"username": "admin", "password": "secret123", "host": "localhost"}` before applying the template.
 
 For example, if the secret in Azure Key Vault is defined as `{"username":"db_username","password":"secret_password","host":"127.0.0.1","port":"5432","dbname":"orders"}`, then for setting the MongoDB connection string, the template value is defined as `mongodb://##secret.username##:##secret.password##@##secret.host##:##secret.port##/##secret.dbname##`. Hence, the final secret that is written on the shared file will be `mongodb://db_username:secret_password@127.0.0.1:5432/orders`.
 
