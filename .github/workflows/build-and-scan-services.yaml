@@ -29,65 +29,89 @@ jobs:
                 dockerFilePath: 'Dockerfile'
               }
             ];
-
             core.setOutput('matrix', JSON.stringify(services));
+
   build-and-scan:
     name: ${{ matrix.service.name }}
-    runs-on: ubuntu-latest
     needs: setup
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         service: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
     permissions:
       contents: "read"
-      id-token: "write"
-      security-events: "write"
       actions: "read"
+      packages: "read"
     steps:
       - uses: actions/checkout@v4
 
-      - id: gcloud-auth
-        name: Authenticate to Google Cloud 🔑
-        uses: google-github-actions/auth@v2
-        with:
-          token_format: access_token
-          service_account: "hasura-ci-docker-writer@hasura-ddn.iam.gserviceaccount.com"
-          workload_identity_provider: "projects/1025009031284/locations/global/workloadIdentityPools/hasura-ddn/providers/github"
+      - name: Setup gcloud for downloading artifacts
+        env:
+          GCLOUD_AUTH_STAGING: ${{ secrets.GCLOUD_AUTH_STAGING }}
+        run: |
+          echo "$GCLOUD_AUTH_STAGING" | base64 -d > "$HOME"/gcloud.json
+          gcloud auth activate-service-account --key-file=$HOME/gcloud.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud.json" >> $GITHUB_ENV
 
-      - name: Login to Google Container Registry 📦
-        uses: "docker/login-action@v3"
-        with:
-          registry: "us-docker.pkg.dev"
-          username: "oauth2accesstoken"
-          password: "${{ steps.gcloud-auth.outputs.access_token }}"
+      - name: Download artifacts needed for image building
+        run: |
+          echo "Downloading cli-ext-binary"
+          make download-cli-ext-binary
 
-      - name: Login to Google Container Registry 📦
-        uses: "docker/login-action@v3"
-        with:
-          registry: "gcr.io"
-          username: "oauth2accesstoken"
-          password: "${{ steps.gcloud-auth.outputs.access_token }}"
+          echo "Downloading v2migrate-binary"
+          make download-v2migrate-binary
+
+      - name: Setup gcloud for env-loader services
+        if: ${{ endsWith(matrix.service.name, '-env-loader') }}
+        env:
+          GCLOUD_EE_AUTH: ${{ secrets.GCLOUD_EE_AUTH }}
+        run: |
+          echo "$GCLOUD_EE_AUTH" | base64 -d > "$HOME"/gcloud.json
+          gcloud auth activate-service-account --key-file=$HOME/gcloud.json
+          gcloud auth configure-docker -q
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcloud.json" >> $GITHUB_ENV
 
       - name: Build ${{ matrix.service.name }}
+        env:
+          NPM_GITHUB_TOKEN: ${{ secrets.NPM_GITHUB_TOKEN }}
+          GIT_COMMIT: ${{ github.sha }}
         run: |
           echo "Building ${{ matrix.service.name }}"
           export TAG="${GITHUB_SHA::8}"
-          export DOCKER_IMG="ghcr.io/hasura/${{ matrix.service.name }}:${TAG}"
-          docker build -t $DOCKER_IMG ${{ matrix.service.dockerContextPath }} -f ${{ matrix.service.dockerFilePath }} 
+          make build-${{ matrix.service.name }}
+          DOCKER_IMG="$(make echo-${{ matrix.service.name }}-image)"
           echo "DOCKER_IMG = $DOCKER_IMG"
           echo "DOCKER_IMG=${DOCKER_IMG}" >> $GITHUB_ENV
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (json output)
         uses: aquasecurity/trivy-action@0.32.0
         with:
           image-ref: ${{ env.DOCKER_IMG }}
-          format: "sarif"
-          output: "trivy-results.sarif"
-          severity: "CRITICAL,HIGH"
+          format: json
+          output: trivy-results.json
+          scanners: vuln
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+      - name: Upload Trivy scan results to PromptQL Security Agent
+        uses: hasura/security-agent-tools/upload-file@v1
         with:
-          sarif_file: "trivy-results.sarif"
+          file_path: trivy-results.json
+          security_agent_api_key: ${{ secrets.SECURITY_AGENT_API_KEY }}
+          tags: |
+            service=${{ matrix.service.name }}
+            source_code_path=${{ matrix.service.source_code_path }}
+            docker_file_path=${{ matrix.service.docker_file_path }}
+            scanner=trivy
+            image_name=${{ env.DOCKER_IMG }}
+
+      - name: Fail build on High/Critical Vulnerabilities
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          skip-setup-trivy: true # setup was already done by the previous call to this action above
+          image-ref: ${{ env.DOCKER_IMG }}
+          format: table
+          severity: "CRITICAL,HIGH"
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: 1
+
