@@ -1,0 +1,84 @@
+# IDE files
+.idea
+.vscode/
+*.swp
+*.swo
+*~
+
+# Version control
+.git
+.gitignore
+
+# Build artifacts
+main
+hasura-secret-refresh
+hasura-secret-refresh-test
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files and secrets
+scratch
+testsecret
+testsecretJson
+iam_db_secret
+*.secret
+api_secret
+api_secret_transformed_only
+
+# Configuration files with credentials
+k_config.yaml
+config-azure-test.yaml
+azure_config.yaml
+test-config-azure.yaml.backup
+config.yaml
+
+# Azure test files with real credentials
+testing/azure-key-vault/config-azure-test.yaml
+
+# Log files
+*.log
+service.log
+
+# Temporary files
+*.tmp
+*.temp
+test-invalid-config.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secret files in temp directories
+/tmp/test-*
+
+# AI-generated test directories (timestamped)
+azure-test-run-*
+e2e-test/azure-test-run-*
+
+# Documentation and examples (not needed in container)
+README.md
+*.md
+examples/
+e2e-test/
+
+# Kubernetes manifests (not needed in container)
+k8s/
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Package manager files are needed for build
+# go.sum is required for dependency verification
+
+# Test coverage files
+*.out
+coverage.html

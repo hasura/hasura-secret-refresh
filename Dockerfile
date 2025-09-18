@@ -1,15 +1,35 @@
-FROM golang:1.21.0-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
 COPY . .
 
-RUN go build -o secrets-management-proxy
+# Build the binary with security flags
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o secrets-management-proxy
 
-FROM alpine:3.18.3
+FROM alpine:3.22
 
-COPY --from=builder /app/secrets-management-proxy /secrets-management-proxy
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
 
-RUN chmod +x /secrets-management-proxy
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
 
-CMD ["/secrets-management-proxy", "--bind-addr=127.0.0.1:5353"]
+WORKDIR /app
+
+# Copy binary from builder stage
+COPY --from=builder /app/secrets-management-proxy /app/secrets-management-proxy
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+CMD ["/app/secrets-management-proxy", "--bind-addr=127.0.0.1:5353"]
