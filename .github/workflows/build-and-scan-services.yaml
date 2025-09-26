@@ -27,7 +27,7 @@ jobs:
                 name: 'hasura-secret-refresher',
                 dockerContextPath: '.',
                 dockerFilePath: 'Dockerfile',
-                domain: 'hasura-v2-cloud-data-plane'
+                domain: 'hasura-ddn-self-hosted-control-plane,hasura-ddn-self-hosted-data-plane'
               }
             ];
             core.setOutput('matrix', JSON.stringify(services));
