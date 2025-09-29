@@ -26,7 +26,8 @@ jobs:
               {
                 name: 'hasura-secret-refresher',
                 dockerContextPath: '.',
-                dockerFilePath: 'Dockerfile'
+                dockerFilePath: 'Dockerfile',
+                domain: 'hasura-ddn-self-hosted-control-plane,hasura-ddn-self-hosted-data-plane'
               }
             ];
             core.setOutput('matrix', JSON.stringify(services));
@@ -64,6 +65,19 @@ jobs:
           output: trivy-results.json
           scanners: vuln
 
+      - name: Upload Trivy scan results to PromptQL Security Agent
+        uses: hasura/security-agent-tools/upload-file@v1
+        with:
+          file_path: trivy-results.json
+          security_agent_api_key: ${{ secrets.SECURITY_AGENT_API_KEY }}
+          tags: |
+            service=${{ matrix.service.name }}
+            source_code_path=${{ matrix.service.source_code_path }}
+            docker_file_path=${{ matrix.service.docker_file_path }}
+            scanner=trivy
+            image_name=${{ env.DOCKER_IMG }}
+            product_domain=${{ matrix.service.domain }}
+
       - name: Fail build on High/Critical Vulnerabilities
         uses: aquasecurity/trivy-action@0.32.0
         with:
@@ -74,4 +88,3 @@ jobs:
           scanners: vuln
           ignore-unfixed: true
           exit-code: 1
-

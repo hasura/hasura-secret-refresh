@@ -17,7 +17,7 @@
 - [Data Source Configuration](#data-source-configuration)
   
 ## Architecture
-Hasura Secrets Management Service (Secrets Proxy) is deployed as a sidecar container in the same pod as the Hasura GraphQL Engine container (**Enterprise Edition only**).
+Hasura Secrets Management Service (Secrets Proxy) is deployed as a sidecar container in the same pod as a service which needs to access secrets securely from a secrets manager. Examples: Hasura GraphQL Engine container (**Enterprise Edition only**), Control plane and data plane services in Hasura DDN (Self-Hosted).
 
 The main job of the Secrets Proxy is to fetch relevant credentials from target secrets manager/auth provider; and make it available to Hasura for calls to user databases or downstream REST APIs (Actions) or Remote Schemas (GraphQL). Here it supports multiple providers to support various integrations with secret providers (e.g. AWS Secrets Manager).
 
