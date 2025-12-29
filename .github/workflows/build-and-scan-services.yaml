@@ -77,6 +77,7 @@ jobs:
             scanner=trivy
             image_name=${{ env.DOCKER_IMG }}
             product_domain=${{ matrix.service.domain }}
+            team=platform
 
       - name: Fail build on High/Critical Vulnerabilities
         uses: aquasecurity/trivy-action@0.32.0
