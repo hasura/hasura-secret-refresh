@@ -2,7 +2,7 @@ module github.com/hasura/hasura-secret-refresh
 
 go 1.25.0
 
-toolchain go1.25.6
+toolchain go1.25.7
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0
