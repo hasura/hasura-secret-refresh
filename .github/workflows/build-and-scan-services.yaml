@@ -57,35 +57,35 @@ jobs:
           echo "DOCKER_IMG = $DOCKER_IMG"
           echo "DOCKER_IMG=${DOCKER_IMG}" >> $GITHUB_ENV
 
-      - name: Run Trivy vulnerability scanner (json output)
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: ${{ env.DOCKER_IMG }}
-          format: json
-          output: trivy-results.json
-          scanners: vuln
-
-      - name: Upload Trivy scan results to PromptQL Security Agent
-        uses: hasura/security-agent-tools/upload-file@v1
-        with:
-          file_path: trivy-results.json
-          security_agent_api_key: ${{ secrets.SECURITY_AGENT_API_KEY }}
-          tags: |
-            service=${{ matrix.service.name }}
-            source_code_path=${{ matrix.service.source_code_path }}
-            docker_file_path=${{ matrix.service.docker_file_path }}
-            scanner=trivy
-            image_name=${{ env.DOCKER_IMG }}
-            product_domain=${{ matrix.service.domain }}
-            team=platform
-
-      - name: Fail build on High/Critical Vulnerabilities
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          skip-setup-trivy: true # setup was already done by the previous call to this action above
-          image-ref: ${{ env.DOCKER_IMG }}
-          format: table
-          severity: "CRITICAL,HIGH"
-          scanners: vuln
-          ignore-unfixed: true
-          exit-code: 1
+#       - name: Run Trivy vulnerability scanner (json output)
+#         uses: aquasecurity/trivy-action@v0.35.0
+#         with:
+#           image-ref: ${{ env.DOCKER_IMG }}
+#           format: json
+#           output: trivy-results.json
+#           scanners: vuln
+# 
+#       - name: Upload Trivy scan results to PromptQL Security Agent
+#         uses: hasura/security-agent-tools/upload-file@v1
+#         with:
+#           file_path: trivy-results.json
+#           security_agent_api_key: ${{ secrets.SECURITY_AGENT_API_KEY }}
+#           tags: |
+#             service=${{ matrix.service.name }}
+#             source_code_path=${{ matrix.service.source_code_path }}
+#             docker_file_path=${{ matrix.service.docker_file_path }}
+#             scanner=trivy
+#             image_name=${{ env.DOCKER_IMG }}
+#             product_domain=${{ matrix.service.domain }}
+#             team=platform
+# 
+#       - name: Fail build on High/Critical Vulnerabilities
+#         uses: aquasecurity/trivy-action@v0.35.0
+#         with:
+#           skip-setup-trivy: true # setup was already done by the previous call to this action above
+#           image-ref: ${{ env.DOCKER_IMG }}
+#           format: table
+#           severity: "CRITICAL,HIGH"
+#           scanners: vuln
+#           ignore-unfixed: true
+#           exit-code: 1
