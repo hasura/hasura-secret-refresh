@@ -2,13 +2,13 @@ package aws_secrets_manager
 
 import (
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	providerutil "github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/hasura/hasura-secret-refresh/template"
 	"github.com/hasura/hasura-secret-refresh/transform"
 	"github.com/rs/zerolog"
@@ -116,7 +116,7 @@ func CreateAwsSecretsManagerFile(config map[string]interface{}, logger zerolog.L
 }
 
 func (provider AwsSecretsManagerFile) Start() {
-	err := os.WriteFile(provider.filePath, []byte(""), 0777)
+	err := providerutil.WriteSecretFile(provider.filePath, []byte(""))
 	if err != nil {
 		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing to file %s", provider.filePath)
 	}
@@ -186,7 +186,7 @@ func (provider AwsSecretsManagerFile) getSecret() (string, error) {
 func (provider AwsSecretsManagerFile) writeFile(secretString string) error {
 	provider.mu.Lock()
 	defer provider.mu.Unlock()
-	err := os.WriteFile(provider.filePath, []byte(secretString), 0777)
+	err := providerutil.WriteSecretFile(provider.filePath, []byte(secretString))
 	if err != nil {
 		provider.logger.Err(err).Msgf("aws_secrets_manager_file: Error occurred while writing secret %s to file %s", provider.secretId, provider.filePath)
 		return err

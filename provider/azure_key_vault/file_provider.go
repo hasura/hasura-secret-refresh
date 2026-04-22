@@ -3,13 +3,13 @@ package azure_key_vault
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
+	providerutil "github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/hasura/hasura-secret-refresh/template"
 	"github.com/hasura/hasura-secret-refresh/transform"
 	"github.com/rs/zerolog"
@@ -151,7 +151,7 @@ func CreateAzureKeyVaultFile(config map[string]interface{}, logger zerolog.Logge
 }
 
 func (provider AzureKeyVaultFile) Start() {
-	err := os.WriteFile(provider.filePath, []byte(""), 0600)
+	err := providerutil.WriteSecretFile(provider.filePath, []byte(""))
 	if err != nil {
 		provider.logger.Err(err).Msgf("azure_key_vault_file: Error occurred while writing to file %s", provider.filePath)
 	}
@@ -225,7 +225,7 @@ func (provider AzureKeyVaultFile) getSecret() (string, error) {
 func (provider AzureKeyVaultFile) writeFile(secretString string) error {
 	provider.mu.Lock()
 	defer provider.mu.Unlock()
-	err := os.WriteFile(provider.filePath, []byte(secretString), 0600)
+	err := providerutil.WriteSecretFile(provider.filePath, []byte(secretString))
 	if err != nil {
 		provider.logger.Err(err).Msgf("azure_key_vault_file: Error occurred while writing secret %s to file %s", provider.secretName, provider.filePath)
 		return err
