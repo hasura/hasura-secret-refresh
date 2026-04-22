@@ -25,7 +25,7 @@ VALIDATION REQUIREMENTS:
 - Documentation validation (README.md, examples, test plans)
 - Error handling validation (proper error types and wrapping)
 - Logging validation (Info, Error, Debug levels)
-- Security validation (no secrets in logs, file permissions 0600)
+- Security validation (no secrets in logs, file permissions 0644)
 
 AZURE SETUP REQUIREMENTS:
 - Check Azure CLI login and subscription
@@ -44,7 +44,7 @@ INTEGRATION TEST REQUIREMENTS:
   * X-Hasura-Secret-Provider: provider name from config
   * X-Hasura-Secret-Header: template like "Authorization: Bearer ##secret##"
   * X-Hasura-Secret-Name: secret name in Azure Key Vault
-- File provider testing with permission checks (0600)
+- File provider testing with permission checks (0644)
 - Template substitution validation for JSON secrets
 - Refresh endpoint testing
 - Performance testing with cache timing (3 requests to measure cache effectiveness)
@@ -57,7 +57,7 @@ REQUIREMENTS:
 - Use current configuration format from config.yaml and examples/
 - CRITICAL: Use cross-platform commands (avoid 'timeout' - use sleep + kill instead)
 - Test HTTP providers (Actions/Remote Schemas) and File providers (Data Sources)
-- Verify template substitution, caching, file permissions (0600), no secret leaks
+- Verify template substitution, caching, file permissions (0644), no secret leaks
 - Include proper error handling and cleanup procedures
 - Support both Service Principal and Managed Identity authentication
 - All generated files should be self-contained in the test directory
@@ -78,7 +78,7 @@ Verify these work correctly:
 - [ ] Documentation validation (README.md, examples, test plans)
 - [ ] Error handling validation (proper error types and wrapping)
 - [ ] Logging validation (Info, Error, Debug levels implemented)
-- [ ] Security validation (no secrets in logs, file permissions 0600)
+- [ ] Security validation (no secrets in logs, file permissions 0644)
 
 ### ✅ Azure Integration (comprehensive setup)
 - [ ] Azure CLI login and subscription verification
@@ -97,7 +97,7 @@ Verify these work correctly:
 - [ ] Caching functionality validation
 
 ### ✅ File Provider Testing (file_azure_key_vault)
-- [ ] Secret files created with correct permissions (0600)
+- [ ] Secret files created with correct permissions (0644)
 - [ ] Template substitution for JSON secrets (MongoDB connection string)
 - [ ] Automatic refresh functionality
 - [ ] Manual refresh via endpoint
@@ -105,7 +105,7 @@ Verify these work correctly:
 
 ### ✅ Performance & Security
 - [ ] Cache timing tests (first request slow, subsequent fast)
-- [ ] File permission security (0600 enforcement)
+- [ ] File permission security (0644 enforcement)
 - [ ] Log security (no secrets visible in logs)
 - [ ] Proper error handling and logging
 - [ ] Memory usage and performance acceptable

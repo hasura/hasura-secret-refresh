@@ -2,11 +2,13 @@ package aws_secrets_manager
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	sharedprovider "github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -381,4 +383,25 @@ func TestAwsSecretsManagerFile_FileName(t *testing.T) {
 	provider, err := CreateAwsSecretsManagerFile(config, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "/tmp/test-secret", provider.FileName())
+}
+
+func TestAwsSecretsManagerFile_writeFileNormalizesPermissions(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "secret.json")
+	err := os.WriteFile(filePath, []byte("old"), 0o600)
+	assert.NoError(t, err)
+	assert.NoError(t, os.Chmod(filePath, 0o600))
+
+	provider := AwsSecretsManagerFile{
+		filePath: filePath,
+		secretId: "test-secret",
+		logger:   zerolog.Nop(),
+		mu:       &sync.Mutex{},
+	}
+
+	err = provider.writeFile("new-secret")
+	assert.NoError(t, err)
+
+	info, err := os.Stat(filePath)
+	assert.NoError(t, err)
+	assert.Equal(t, sharedprovider.SecretFileMode, info.Mode().Perm())
 }
