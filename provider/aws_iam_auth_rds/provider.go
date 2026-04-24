@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
+	sharedprovider "github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/hasura/hasura-secret-refresh/template"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
@@ -66,7 +66,7 @@ func (provider *AWSIAMAuthRDSFile) checkDSNConnectivity(dsn string) error {
 }
 
 func (provider *AWSIAMAuthRDSFile) Start() {
-	err := os.WriteFile(provider.filePath, []byte(""), 0777)
+	err := sharedprovider.WriteSecretFile(provider.filePath, []byte(""))
 	if err != nil {
 		provider.logger.Err(err).Msgf("error occured while writing to a file :%s", provider.filePath)
 	}
@@ -138,7 +138,7 @@ func (provider AWSIAMAuthRDSFile) getSecret() (string, error) {
 func (provider AWSIAMAuthRDSFile) writeFile(secretString string) error {
 	provider.mu.Lock()
 	defer provider.mu.Unlock()
-	err := os.WriteFile(provider.filePath, []byte(secretString), 0777)
+	err := sharedprovider.WriteSecretFile(provider.filePath, []byte(secretString))
 	if err != nil {
 		provider.logger.Err(err).Msgf("error occurred while writing secret to file %s", provider.filePath)
 		return err

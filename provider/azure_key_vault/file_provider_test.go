@@ -1,8 +1,12 @@
 package azure_key_vault
 
 import (
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
+	sharedprovider "github.com/hasura/hasura-secret-refresh/provider"
 	"github.com/rs/zerolog"
 )
 
@@ -233,5 +237,37 @@ func TestAzureKeyVaultFile_FileName(t *testing.T) {
 	fileName := provider.FileName()
 	if fileName != "/tmp/test-secret" {
 		t.Errorf("Expected file name '/tmp/test-secret', got '%s'", fileName)
+	}
+}
+
+func TestAzureKeyVaultFile_writeFileNormalizesPermissions(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "secret.json")
+	err := os.WriteFile(filePath, []byte("old"), 0o600)
+	if err != nil {
+		t.Fatalf("WriteFile returned error: %v", err)
+	}
+
+	if err := os.Chmod(filePath, 0o600); err != nil {
+		t.Fatalf("Chmod returned error: %v", err)
+	}
+
+	provider := AzureKeyVaultFile{
+		filePath:   filePath,
+		secretName: "test-secret",
+		logger:     zerolog.Nop(),
+		mu:         &sync.Mutex{},
+	}
+
+	if err := provider.writeFile("new-secret"); err != nil {
+		t.Fatalf("writeFile returned error: %v", err)
+	}
+
+	info, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatalf("Stat returned error: %v", err)
+	}
+
+	if got := info.Mode().Perm(); got != sharedprovider.SecretFileMode {
+		t.Fatalf("expected mode %04o, got %04o", sharedprovider.SecretFileMode, got)
 	}
 }
