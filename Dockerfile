@@ -1,4 +1,4 @@
-FROM golang:1.25.7-alpine AS builder
+FROM golang:1.25.9-alpine3.23 AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY . .
 # Build the binary with security flags
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o secrets-management-proxy
 
-FROM alpine:3.23.3
+FROM alpine:3.23.4
 
 # Install ca-certificates for HTTPS requests
 RUN apk --no-cache add ca-certificates
