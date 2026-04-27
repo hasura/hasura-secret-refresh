@@ -66,14 +66,15 @@ jobs:
           scanners: vuln
 
       - name: Upload Trivy scan results to PromptQL Security Agent
+        if: github.event_name != 'pull_request'
         uses: hasura/security-agent-tools/upload-file@v1
         with:
           file_path: trivy-results.json
           security_agent_api_key: ${{ secrets.SECURITY_AGENT_API_KEY }}
           tags: |
             service=${{ matrix.service.name }}
-            source_code_path=${{ matrix.service.source_code_path }}
-            docker_file_path=${{ matrix.service.docker_file_path }}
+            source_code_path=${{ matrix.service.dockerContextPath }}
+            docker_file_path=${{ matrix.service.dockerFilePath }}
             scanner=trivy
             image_name=${{ env.DOCKER_IMG }}
             product_domain=${{ matrix.service.domain }}
