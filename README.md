@@ -13,6 +13,8 @@
   - [file_aws_iam_auth_rds](#file_aws_iam_auth_rds)
   - [proxy_azure_key_vault](#proxy_azure_key_vault)
   - [file_azure_key_vault](#proxy_azure_key_vault)
+  - [proxy_hashicorp_vault](#proxy_hashicorp_vault)
+  - [file_hashicorp_vault](#file_hashicorp_vault)
 - [Actions/RS Configuration](#actionsrs-configuration)
 - [Data Source Configuration](#data-source-configuration)
   
@@ -209,12 +211,14 @@ data:
 
 The Secrets Proxy supports multiple mechanisms of fetching and injecting secrets for any number of use cases and integrations.
 
-Each section of the configuration is backed by a type of provider. There are 5 types of providers currently supported:
+Each section of the configuration is backed by a type of provider. The following provider types are currently supported:
 1. `proxy_awssm_oauth`
 2. `file_aws_secrets_manager`
 3. `file_aws_iam_auth_rds`
 4. `proxy_azure_key_vault`
 5. `file_azure_key_vault`
+6. `proxy_hashicorp_vault`
+7. `file_hashicorp_vault`
 
 Any provider starting with `proxy_` is the type which acts as a forward proxy for credential injections to Actions and Remote Schemas.
 
@@ -224,10 +228,10 @@ The config file follows the following format
 
 ```
 <config-name-for-an-integration-1>:
-	type: proxy_awssm_oauth | file_aws_secrets_manager | proxy_azure_key_vault | file_azure_key_vault
+	type: proxy_awssm_oauth | file_aws_secrets_manager | proxy_azure_key_vault | file_azure_key_vault | proxy_hashicorp_vault | file_hashicorp_vault
 	…<other provider_configs>
 <config-name-for-an-integration-2>:
-	type: proxy_awssm_oauth | file_aws_secrets_manager | proxy_azure_key_vault | file_azure_key_vault
+	type: proxy_awssm_oauth | file_aws_secrets_manager | proxy_azure_key_vault | file_azure_key_vault | proxy_hashicorp_vault | file_hashicorp_vault
 	…<other provider_configs>
 …
 ```
@@ -474,6 +478,80 @@ The provider `file_azure_key_vault` works in conjunction with the Dynamic Secret
 * When Hasura encounters an Auth error with a downstream database (say, due to old credentials), Hasura will re-read the credentials from the shared secret file and retry the request. If Secrets Proxy has already updated the secret as per the refresh policy, Hasura will pick up the new credential and retry the request.
 * Since Secrets Proxy has a refresh interval, the new secret pull may take time. In worst case scenario, the request to the database may fail till next refresh happens (e.g. 60 secs).
 
+### proxy_hashicorp_vault
+`proxy_hashicorp_vault` is a proxy type of provider that fetches secrets from a HashiCorp Vault KV v2 secrets engine for Actions and Remote Schemas. The configuration parameters are:
+
+* `type`: Must always be `proxy_hashicorp_vault`.
+* `vault_addr`: The base URL of the Vault server, e.g. `https://vault.internal:8200`.
+* `namespace` (optional): Vault Enterprise namespace, e.g. `engineering/team-a`.
+* `mount` (optional, default `secret`): The default KV v2 mount point. Per-request overrides are possible via `X-Hasura-Vault-Mount`.
+* `cache_ttl` (optional, default 300 seconds): TTL of the in-memory LRU cache that fronts Vault reads.
+* `auth`: Authentication block (see below). Only `kubernetes` auth is supported currently.
+* `tls` (optional):
+  * `ca_cert`: Path to a CA certificate used to verify the Vault server.
+  * `skip_verify`: Skip TLS verification (not recommended in production).
+
+**Authentication (Kubernetes only):**
+* `auth.method`: Must be `kubernetes`.
+* `auth.role`: The Vault Kubernetes auth role to authenticate as.
+* `auth.mount_path` (optional, default `kubernetes`): The mount path of the Kubernetes auth method in Vault.
+* `auth.jwt_path` (optional, default `/var/run/secrets/kubernetes.io/serviceaccount/token`): Path to the projected ServiceAccount token on disk.
+
+The proxy maintains the Vault token via a `LifetimeWatcher`: tokens are renewed before expiry, and re-login is performed automatically if a watcher exits.
+
+#### Example Config
+```yaml
+actions_vault:
+  type: proxy_hashicorp_vault
+  vault_addr: "https://vault.internal:8200"
+  cache_ttl: 300
+  auth:
+    method: kubernetes
+    role: "hasura-proxy"
+```
+
+#### Headers
+When this provider receives a request, per-request behavior is controlled by these headers:
+* `X-Hasura-Vault-Path` (required): The KV v2 path to read, e.g. `postgres/prod`. A leading `data/` segment may be included but is not required.
+* `X-Hasura-Vault-Field` (optional): If set, project this single field out of the KV payload. If omitted, the entire JSON object is returned as a string.
+* `X-Hasura-Vault-Version` (optional): Pin a specific KV v2 version.
+* `X-Hasura-Vault-Mount` (optional): Override the configured `mount` for this request.
+
+### file_hashicorp_vault
+`file_hashicorp_vault` fetches secrets from a HashiCorp Vault KV v2 secrets engine and writes them to a file on a shared volume between Hasura and the Secrets Proxy. This is used for Vault-backed integration with Data Sources. Configuration parameters:
+
+* `type`: Must always be `file_hashicorp_vault`.
+* `vault_addr`: Vault server base URL.
+* `namespace` (optional): Vault Enterprise namespace.
+* `mount` (optional, default `secret`): KV v2 mount point.
+* `path`: KV v2 path within the mount, e.g. `postgres/prod` (do not include the `data/` prefix).
+* `version` (optional): Specific KV v2 version to pin to. If omitted, the latest version is read.
+* `field` (optional): Single field to extract from the KV payload. If omitted, the whole payload is JSON-encoded.
+* `refresh`: Refresh interval in seconds.
+* `path_on_disk`: Destination file path on the shared volume. The filename should match the expected SECRET name in Hasura.
+* `template` (optional): Template applied to the secret value before writing. See [template format](template/README.md). Mutually exclusive with `transform`.
+* `transform` (optional): JSON key remapping prior to writing. See `transform` in the Azure provider docs above. Mutually exclusive with `template`.
+* `auth`: Authentication block; same shape as `proxy_hashicorp_vault`.
+* `tls` (optional): Same TLS block as the proxy provider.
+
+#### Example Config
+```yaml
+my_db_creds:
+  type: file_hashicorp_vault
+  vault_addr: "https://vault.internal:8200"
+  auth:
+    method: kubernetes
+    role: "hasura-sidecar"
+  mount: "secret"
+  path: "postgres/prod"
+  refresh: 60
+  path_on_disk: "/secret/postgres.txt"
+  template: "postgres://##secret.username##:##secret.password##@##secret.host##/db"
+```
+
+#### Secret Rotation
+`file_hashicorp_vault` participates in the Dynamic Secrets From File flow exactly like `file_azure_key_vault`: secrets are re-fetched at the configured `refresh` interval, and Hasura re-reads the file on auth-failure retries. Vault tokens are renewed continuously by a background `LifetimeWatcher` goroutine.
+
 ## Actions/RS Configuration
 Once the Secrets Proxy is configured, Actions/RS needs to be set in a particular manner in Hasura in order to get the pass the relevant parameters for the integration.
 
@@ -498,6 +576,16 @@ When using the `proxy_azure_key_vault` provider, use these headers instead:
 * `X-Hasura-Secret-Header`: Same as above - the header template for the backend service
 * `X-Hasura-Secret-Provider`: Set this to the name of your Azure Key Vault provider configuration (e.g., `azure_actions_prod`)
 * `X-Hasura-Secret-Name`: The name of the secret in Azure Key Vault that contains the access token
+
+#### For HashiCorp Vault Provider (proxy_hashicorp_vault)
+When using the `proxy_hashicorp_vault` provider, use these headers:
+* `X-Hasura-Forward-To`: Same as above - the downstream service URL.
+* `X-Hasura-Secret-Header`: Same as above - the header template for the backend service.
+* `X-Hasura-Secret-Provider`: Set to the name of your HashiCorp Vault provider configuration (e.g., `actions_vault`).
+* `X-Hasura-Vault-Path` (required): The KV v2 path to read.
+* `X-Hasura-Vault-Field` (optional): If set, projects a single field out of the KV payload.
+* `X-Hasura-Vault-Version` (optional): Pin a specific KV v2 version.
+* `X-Hasura-Vault-Mount` (optional): Override the configured KV mount.
 
 Requests going through the action now will go through the Secrets Proxy ensuring the request headers have been transformed to pick up correct Authorization values in its header.
 
