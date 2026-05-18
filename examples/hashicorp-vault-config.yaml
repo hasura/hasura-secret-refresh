@@ -1,0 +1,71 @@
+# Example configuration for HashiCorp Vault integration.
+# This file demonstrates how to configure the Hasura Secrets Proxy to
+# work with HashiCorp Vault using Kubernetes ServiceAccount auth, for
+# both Actions/Remote Schemas (HTTP proxy provider) and Data Sources
+# (file provider).
+
+# Log configuration
+log_config:
+  level: "info"
+
+# Refresh endpoint configuration (optional)
+refresh_config:
+  endpoint: "/refresh"
+
+# HashiCorp Vault HTTP proxy provider for Actions and Remote Schemas.
+# The actual KV v2 path is sent per-request via the
+# `X-Hasura-Vault-Path` header. Optional companion headers:
+#   X-Hasura-Vault-Field    select a single field out of the KV payload
+#   X-Hasura-Vault-Version  pin a specific KV v2 version
+#   X-Hasura-Vault-Mount    override the default KV mount
+actions_vault:
+  type: proxy_hashicorp_vault
+  vault_addr: "https://vault.internal:8200"
+  namespace: "engineering/team-a"             # optional, Vault Enterprise only
+  mount: "secret"                             # default KV mount
+  cache_ttl: 300                              # seconds; in-memory LRU
+  auth:
+    method: kubernetes
+    role: "hasura-proxy"
+    mount_path: "kubernetes"                  # optional, default "kubernetes"
+    jwt_path: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  tls:
+    ca_cert: "/etc/vault/ca.pem"
+    skip_verify: false
+
+# HashiCorp Vault file provider for a Postgres datasource.
+# Reads from the KV v2 mount and writes the templated connection
+# string to disk for Hasura.
+my_db_creds:
+  type: file_hashicorp_vault
+  vault_addr: "https://vault.internal:8200"
+  namespace: "engineering/team-a"             # optional, Enterprise only
+  auth:
+    method: kubernetes
+    role: "hasura-sidecar"
+    mount_path: "kubernetes"
+    jwt_path: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  mount: "secret"
+  kv_version: 2
+  path: "postgres/prod"                       # KV v2 path (no leading data/)
+  field: ""                                   # optional single-field projection
+  refresh: 60                                 # seconds between refreshes
+  path_on_disk: "/secret/postgres.txt"
+  template: "postgres://##secret.username##:##secret.password##@##secret.host##/db"
+  tls:
+    ca_cert: "/etc/vault/ca.pem"
+    skip_verify: false
+
+# A second file provider that pins a specific KV v2 version.
+api_token_vault:
+  type: file_hashicorp_vault
+  vault_addr: "https://vault.internal:8200"
+  auth:
+    method: kubernetes
+    role: "hasura-sidecar"
+  mount: "secret"
+  path: "api/bearer-token"
+  version: "3"
+  field: "token"
+  refresh: 300
+  path_on_disk: "/secret/api-token.txt"
