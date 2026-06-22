@@ -1,4 +1,4 @@
-FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine3.23-stable AS builder
+FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable AS builder
 
 WORKDIR /app
 
