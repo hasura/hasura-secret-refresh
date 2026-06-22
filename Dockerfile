@@ -14,8 +14,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflag
 
 FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/alpine:3.23-stable
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+# Upgrade OS packages to the latest security patches (the -stable base snapshot can
+# lag behind published fixes, e.g. openssl libcrypto3/libssl3 CVE-2026-45447), then
+# install ca-certificates for HTTPS requests
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \
