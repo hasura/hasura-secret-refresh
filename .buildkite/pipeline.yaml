@@ -1,0 +1,72 @@
+# Buildkite pipeline for hasura-secret-refresh.
+#
+# Builds the hasura/secrets-management-proxy Docker image (same Dockerfile and
+# build context as the GitHub Actions "Build and push docker image" workflow)
+# and pushes it to Docker Hub on main-branch builds with the immutable tag
+# format: <YYYY>.<M>.<D>-build.<total-commits-in-day>.<short-commit>
+# e.g. 2026.6.24-build.3.1b4f3bf
+#
+# PREREQUISITES (must be done by a human — see PR description):
+#   1. This repo is NOT yet registered as a Buildkite pipeline in the hasura
+#      Buildkite org. It must be created there and configured to trigger on
+#      pushes to the `main` branch.
+#   2. The AWS Secrets Manager key holding the Docker Hub credentials must be
+#      filled into the `# TODO(human)` placeholder in the smooth-secrets plugin
+#      below (region us-east-2, hasura-ci account).
+#
+# NOTE: Buildkite interpolates `$VAR` / `$(...)` at pipeline-upload time. Shell
+# variables and command substitutions that must run on the agent at job time
+# are therefore escaped as `$$` so they survive to runtime.
+
+steps:
+  - label: ":docker: build & push secrets-management-proxy"
+    # Only build/push from main. (The pipeline-level trigger should also be
+    # restricted to main in the Buildkite UI; this guard is belt-and-braces.)
+    if: build.branch == "main"
+    agents:
+      queue: aws-v3-build-node-common
+    plugins:
+      # TODO(human): pin to the version used by other Hasura docker-build pipelines.
+      - hasura/smooth-checkout#TODO_VERSION:
+          config:
+            - url: git@github.com:hasura/hasura-secret-refresh.git
+          delete_checkout: true
+      # TODO(human): pin to the version used by other Hasura docker-build pipelines.
+      - hasura/smooth-secrets#TODO_VERSION:
+          secrets:
+            # TODO(human): set correct AWS Secrets Manager key for Docker Hub creds
+            # (region us-east-2, hasura-ci account). Map the secret's fields onto
+            # the DOCKERHUB_USERNAME / DOCKERHUB_TOKEN env vars consumed below.
+            - strategy: aws-secrets-manager
+              key: TODO_DOCKERHUB_AWS_SECRETS_MANAGER_KEY
+              region: us-east-2
+              type: env
+              # field: username
+              # name: DOCKERHUB_USERNAME
+            - strategy: aws-secrets-manager
+              key: TODO_DOCKERHUB_AWS_SECRETS_MANAGER_KEY
+              region: us-east-2
+              type: env
+              # field: token
+              # name: DOCKERHUB_TOKEN
+    command: |
+      set -euo pipefail
+
+      # The commit-of-the-day ordinal needs full history; smooth-checkout may
+      # produce a shallow clone, so unshallow defensively (no-op if already full).
+      git fetch --unshallow || true
+
+      DATE_TAG="$$(date -u +'%Y.%-m.%-d')"
+      DATE="$$(date -u +'%Y-%m-%d')"
+      COUNT="$$(TZ=UTC git log --since="$${DATE}T00:00:00" --until="$${DATE}T23:59:59" --oneline | wc -l | tr -d ' ')"
+      SHORT_SHA="$$(git rev-parse --short=7 HEAD)"
+      IMAGE="hasura/secrets-management-proxy:$${DATE_TAG}-build.$${COUNT}.$${SHORT_SHA}"
+
+      echo "--- :docker: building $${IMAGE}"
+      docker build -t "$${IMAGE}" -f ./Dockerfile .
+
+      echo "--- :docker: logging in to Docker Hub"
+      docker login -u "$$DOCKERHUB_USERNAME" -p "$$DOCKERHUB_TOKEN"
+
+      echo "--- :docker: pushing $${IMAGE}"
+      docker push "$${IMAGE}"
