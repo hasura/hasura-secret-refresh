@@ -24,10 +24,27 @@ jobs:
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
+        name: Compute image tags
+        id: tags
+        run: |
+          # On a git tag push, keep publishing the immutable :<tagname> image.
+          # On a main-branch push, publish an immutable :<UTC-date>-<short-commit>
+          # image plus the floating :main alias pointing at that same build.
+          {
+            echo "tags<<EOF"
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              echo "hasura/secrets-management-proxy:${{ github.ref_name }}"
+            else
+              echo "hasura/secrets-management-proxy:$(date -u +'%Y%m%d')-${GITHUB_SHA::7}"
+              echo "hasura/secrets-management-proxy:main"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      -
         name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: hasura/secrets-management-proxy:${{ github.ref_name }}
+          tags: ${{ steps.tags.outputs.tags }}
