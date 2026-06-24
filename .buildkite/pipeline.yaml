@@ -1,72 +1,77 @@
 # Buildkite pipeline for hasura-secret-refresh.
 #
-# Builds the hasura/secrets-management-proxy Docker image (same Dockerfile and
-# build context as the GitHub Actions "Build and push docker image" workflow)
-# and pushes it to Docker Hub on main-branch builds with the immutable tag
-# format: <YYYY>.<M>.<D>-build.<total-commits-in-day>.<short-commit>
-# e.g. 2026.6.24-build.3.1b4f3bf
+# Builds the secrets-management-proxy Docker image and pushes it to
+# gcr.io/hasura-ee, following the same convention as hasura/solutions'
+# .buildkite/pipeline.yaml — GCP Workload Identity Federation for gcr.io auth
+# (no Docker Hub credentials needed).
 #
-# PREREQUISITES (must be done by a human — see PR description):
-#   1. This repo is NOT yet registered as a Buildkite pipeline in the hasura
-#      Buildkite org. It must be created there and configured to trigger on
-#      pushes to the `main` branch.
-#   2. The AWS Secrets Manager key holding the Docker Hub credentials must be
-#      filled into the `# TODO(human)` placeholder in the smooth-secrets plugin
-#      below (region us-east-2, hasura-ci account).
+# Immutable tag format: <YYYY>.<M>.<D>-build.<total-commits-in-day>.<short-commit>
+#   e.g. 2026.6.24-build.3.1b4f3bf
+# On the main branch a floating :main tag is additionally pushed for the same
+# build (metadata-only, via docker buildx imagetools create).
 #
-# NOTE: Buildkite interpolates `$VAR` / `$(...)` at pipeline-upload time. Shell
-# variables and command substitutions that must run on the agent at job time
-# are therefore escaped as `$$` so they survive to runtime.
+# PREREQUISITE (human): this repo is not yet registered as a Buildkite pipeline
+# in the hasura Buildkite org. It must be created there and configured to
+# trigger on pushes to the main branch.
 
+agents:
+  queue: "aws-v3-build-node-common"
 steps:
-  - label: ":docker: build & push secrets-management-proxy"
-    # Only build/push from main. (The pipeline-level trigger should also be
-    # restricted to main in the Buildkite UI; this guard is belt-and-braces.)
+  - label: ":docker: Build and Push secrets-management-proxy"
+    key: build-secrets-management-proxy
     if: build.branch == "main"
-    agents:
-      queue: aws-v3-build-node-common
-    plugins:
-      # TODO(human): pin to the version used by other Hasura docker-build pipelines.
-      - hasura/smooth-checkout#TODO_VERSION:
-          config:
-            - url: git@github.com:hasura/hasura-secret-refresh.git
-          delete_checkout: true
-      # TODO(human): pin to the version used by other Hasura docker-build pipelines.
-      - hasura/smooth-secrets#TODO_VERSION:
-          secrets:
-            # TODO(human): set correct AWS Secrets Manager key for Docker Hub creds
-            # (region us-east-2, hasura-ci account). Map the secret's fields onto
-            # the DOCKERHUB_USERNAME / DOCKERHUB_TOKEN env vars consumed below.
-            - strategy: aws-secrets-manager
-              key: TODO_DOCKERHUB_AWS_SECRETS_MANAGER_KEY
-              region: us-east-2
-              type: env
-              # field: username
-              # name: DOCKERHUB_USERNAME
-            - strategy: aws-secrets-manager
-              key: TODO_DOCKERHUB_AWS_SECRETS_MANAGER_KEY
-              region: us-east-2
-              type: env
-              # field: token
-              # name: DOCKERHUB_TOKEN
+    retry:
+      manual:
+        permit_on_passed: true
     command: |
-      set -euo pipefail
+      set -eu -o pipefail
 
-      # The commit-of-the-day ordinal needs full history; smooth-checkout may
-      # produce a shallow clone, so unshallow defensively (no-op if already full).
+      # Full history is required to count the day's commits for the build number.
       git fetch --unshallow || true
 
-      DATE_TAG="$$(date -u +'%Y.%-m.%-d')"
-      DATE="$$(date -u +'%Y-%m-%d')"
-      COUNT="$$(TZ=UTC git log --since="$${DATE}T00:00:00" --until="$${DATE}T23:59:59" --oneline | wc -l | tr -d ' ')"
-      SHORT_SHA="$$(git rev-parse --short=7 HEAD)"
-      IMAGE="hasura/secrets-management-proxy:$${DATE_TAG}-build.$${COUNT}.$${SHORT_SHA}"
+      COMMIT_REF="$(git rev-parse --short=7 HEAD)"
+      DATE_VERSION="$(TZ=UTC date +'%Y.%-m.%-d')"
+      DATE_DAY="$(TZ=UTC date +'%Y-%m-%d')"
+      BUILD_NUM="$(TZ=UTC git log --since="$$DATE_DAY 00:00:00" --until="$$DATE_DAY 23:59:59" --oneline | wc -l | tr -d ' ')"
+      VERSION="$$DATE_VERSION-build.$$BUILD_NUM.$$COMMIT_REF"
 
-      echo "--- :docker: building $${IMAGE}"
-      docker build -t "$${IMAGE}" -f ./Dockerfile .
+      echo "~~~ :buildkite: Building secrets-management-proxy with VERSION=$$VERSION"
 
-      echo "--- :docker: logging in to Docker Hub"
-      docker login -u "$$DOCKERHUB_USERNAME" -p "$$DOCKERHUB_TOKEN"
+      echo "~~~ :docker: Configuring docker gcr helper"
+      docker-credential-gcr configure-docker --registries=gcr.io
 
-      echo "--- :docker: pushing $${IMAGE}"
-      docker push "$${IMAGE}"
+      DOCKER_IMAGE="gcr.io/hasura-ee/secrets-management-proxy:$$VERSION"
+
+      echo "~~~ :docker: Building"
+      docker build -t "$$DOCKER_IMAGE" -f ./Dockerfile .
+
+      echo "~~~ :docker: Pushing"
+      docker push "$$DOCKER_IMAGE"
+
+      if [[ "$BUILDKITE_BRANCH" == 'main' ]]; then
+        MAIN_TAG="gcr.io/hasura-ee/secrets-management-proxy:main"
+        echo "~~~ :docker: Adding floating :main tag"
+        docker buildx imagetools create -t "$$MAIN_TAG" "$$DOCKER_IMAGE"
+      fi
+
+      echo "~~~ :docker: Removing local image"
+      docker image rm "$$DOCKER_IMAGE" || true
+    env:
+      DOCKER_BUILDKIT: "1"
+    plugins:
+      - hasura/smooth-secrets#v1.3.2:
+          secrets:
+            - strategy: aws-secrets-manager
+              key: github-user-keys/hasura-ci
+              type: ssh
+              region: us-east-2
+      - gcp-workload-identity-federation#v1.5.0:
+          audience: "//iam.googleapis.com/projects/1025009031284/locations/global/workloadIdentityPools/hasura-ddn/providers/buildkite"
+          service-account: "hasura-ci-docker-writer@hasura-ddn.iam.gserviceaccount.com"
+          lifetime: 3600
+      - hasura/smooth-checkout#v4.3.2:
+          repos:
+            - config:
+                - url: git@github.com:hasura/hasura-secret-refresh.git
+          delete_checkout: true
+          interpolate_checkout_path: "$BUILDKITE_BUILD_CHECKOUT_PATH/$BUILDKITE_BUILD_ID/$BUILDKITE_JOB_ID"
