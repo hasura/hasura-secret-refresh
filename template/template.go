@@ -2,8 +2,8 @@ package template
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -32,31 +32,85 @@ func (t Template) Substitute(with string) string {
 	return result
 }
 
-func jsonTemplate(jsonTemplate, substituteWith string, logger zerolog.Logger) (res string, canContinue bool) {
-	jsonPath := strings.Split(jsonTemplate, ".")
+func jsonTemplate(templateKey, substituteWith string, logger zerolog.Logger) (res string, canContinue bool) {
+	jsonPath := strings.Split(templateKey, ".")
 	if len(jsonPath) < 2 {
 		return substituteWith, true
 	}
 	jsonParsed := make(map[string]interface{})
 	err := json.Unmarshal([]byte(substituteWith), &jsonParsed)
 	if err != nil {
-		logger.Err(err).Msg("Unable to parse secret as a JSON")
-		logger.Debug().Err(err).Msgf("Unable to parse secret as a JSON: %s", substituteWith)
+		logJSONTemplateParseError(logger, templateKey, substituteWith, err)
 		return "", false
 	}
 	jsonKey := strings.TrimSpace(jsonPath[1])
 	val, ok := jsonParsed[jsonKey]
 	if !ok {
-		logger.Error().Msgf("Key %s not found in secret", jsonKey)
-		logger.Debug().Msgf("Key %s not found in secret %s", jsonKey, substituteWith)
+		logger.Error().
+			Str("template_key", templateKey).
+			Msg("Template key not found in secret JSON")
 		return "", true
 	}
-	if reflect.ValueOf(val).Kind() == reflect.Map {
-		logger.Error().Msgf("Nested JSON is not supported in secrets")
-		logger.Debug().Msgf("Nested JSON is not supported, secret: %s", substituteWith)
+	if _, isMap := val.(map[string]interface{}); isMap {
+		logger.Error().
+			Str("template_key", templateKey).
+			Msg("Nested JSON lookups are not supported in secrets")
 		return "", true
 	}
 	valS := fmt.Sprintf("%v", val)
 	valS = strings.TrimSpace(valS)
 	return valS, true
+}
+
+func logJSONTemplateParseError(logger zerolog.Logger, templateKey, rawSecret string, err error) {
+	event := logger.Error().
+		Err(err).
+		Str("template_key", templateKey)
+
+	if offset, line, column, ok := jsonErrorPosition(rawSecret, err); ok {
+		event = event.Int64("offset", offset).Int("line", line).Int("column", column)
+	}
+
+	event.Msg("Unable to parse secret as JSON for template lookup")
+}
+
+func jsonErrorPosition(rawSecret string, err error) (offset int64, line int, column int, ok bool) {
+	var syntaxErr *json.SyntaxError
+	if errors.As(err, &syntaxErr) {
+		line, column = offsetToLineColumn(rawSecret, syntaxErr.Offset)
+		return syntaxErr.Offset, line, column, true
+	}
+
+	var typeErr *json.UnmarshalTypeError
+	if errors.As(err, &typeErr) {
+		line, column = offsetToLineColumn(rawSecret, typeErr.Offset)
+		return typeErr.Offset, line, column, true
+	}
+
+	return 0, 0, 0, false
+}
+
+func offsetToLineColumn(rawSecret string, offset int64) (line int, column int) {
+	if offset < 1 {
+		return 1, 1
+	}
+
+	line = 1
+	column = 1
+	bytes := []byte(rawSecret)
+	limit := int(offset - 1)
+	if limit > len(bytes) {
+		limit = len(bytes)
+	}
+
+	for i := 0; i < limit; i++ {
+		if bytes[i] == '\n' {
+			line++
+			column = 1
+			continue
+		}
+		column++
+	}
+
+	return line, column
 }

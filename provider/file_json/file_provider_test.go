@@ -82,6 +82,48 @@ func TestCreateFileJsonProvider(t *testing.T) {
 		_, err := CreateFileJsonProvider(config, logger)
 		assert.Error(t, err)
 	})
+
+	t.Run("rejects same file after path cleaning", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		inputPath := filepath.Join(tmpDir, "secrets.json")
+
+		err := os.WriteFile(inputPath, []byte(`{"token":"value"}`), 0o644)
+		require.NoError(t, err)
+
+		config := map[string]interface{}{
+			"type":       "file_json",
+			"input_path": filepath.Join(tmpDir, ".", "secrets.json"),
+			"path":       filepath.Join(tmpDir, "nested", "..", "secrets.json"),
+			"refresh":    60,
+		}
+
+		_, err = CreateFileJsonProvider(config, logger)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "'input_path' and 'path' must refer to different files")
+	})
+
+	t.Run("rejects same file through symlink resolution", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		inputPath := filepath.Join(tmpDir, "secrets.json")
+		symlinkPath := filepath.Join(tmpDir, "secrets-link.json")
+
+		err := os.WriteFile(inputPath, []byte(`{"token":"value"}`), 0o644)
+		require.NoError(t, err)
+		if err := os.Symlink(inputPath, symlinkPath); err != nil {
+			t.Skipf("unable to create symlink on this platform: %v", err)
+		}
+
+		config := map[string]interface{}{
+			"type":       "file_json",
+			"input_path": symlinkPath,
+			"path":       inputPath,
+			"refresh":    60,
+		}
+
+		_, err = CreateFileJsonProvider(config, logger)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "'input_path' and 'path' must refer to different files")
+	})
 }
 
 func TestFileJsonProviderRefresh(t *testing.T) {

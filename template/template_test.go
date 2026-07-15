@@ -1,6 +1,7 @@
 package template
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -97,4 +98,74 @@ func TestTemplate_GetKeysFromTemplates(t *testing.T) {
 			t.Errorf("Test case - %s: Expected '%s' but got '%s'", testCase.name, testCase.expected, actual)
 		}
 	}
+}
+
+func TestTemplateDoesNotLeakSecretContentsInLogs(t *testing.T) {
+	t.Run("malformed json reports position without payload", func(t *testing.T) {
+		var logs bytes.Buffer
+		logger := zerolog.New(&logs).Level(zerolog.DebugLevel)
+		template := Template{Templ: "Bearer ##secret1.token##", Logger: logger}
+
+		actual := template.Substitute("{\n  \"token\": \"super-secret\",\n  \"broken\": [1,}\n")
+		if strings.TrimSpace(actual) != "Bearer" {
+			t.Fatalf("expected substitution to stop after parse failure, got %q", actual)
+		}
+
+		logOutput := logs.String()
+		if strings.Contains(logOutput, "super-secret") {
+			t.Fatalf("log output leaked secret contents: %s", logOutput)
+		}
+		if !strings.Contains(logOutput, "\"template_key\":\"secret1.token\"") {
+			t.Fatalf("expected template key in log output, got %s", logOutput)
+		}
+		if !strings.Contains(logOutput, "\"line\":") || !strings.Contains(logOutput, "\"column\":") {
+			t.Fatalf("expected line/column info in log output, got %s", logOutput)
+		}
+	})
+
+	t.Run("lookup failures report key path without payload", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			template       string
+			secret         string
+			expectedLogMsg string
+			expectedKey    string
+		}{
+			{
+				name:           "missing key",
+				template:       "Bearer ##secret1.missing##",
+				secret:         `{"token":"super-secret"}`,
+				expectedLogMsg: "Template key not found in secret JSON",
+				expectedKey:    "secret1.missing",
+			},
+			{
+				name:           "nested object",
+				template:       "Bearer ##secret1.key.inner##",
+				secret:         `{"key":{"inner":"super-secret"}}`,
+				expectedLogMsg: "Nested JSON lookups are not supported in secrets",
+				expectedKey:    "secret1.key.inner",
+			},
+		}
+
+		for _, testCase := range tests {
+			t.Run(testCase.name, func(t *testing.T) {
+				var logs bytes.Buffer
+				logger := zerolog.New(&logs).Level(zerolog.DebugLevel)
+				template := Template{Templ: testCase.template, Logger: logger}
+
+				_ = template.Substitute(testCase.secret)
+
+				logOutput := logs.String()
+				if strings.Contains(logOutput, "super-secret") {
+					t.Fatalf("log output leaked secret contents: %s", logOutput)
+				}
+				if !strings.Contains(logOutput, testCase.expectedLogMsg) {
+					t.Fatalf("expected log message %q, got %s", testCase.expectedLogMsg, logOutput)
+				}
+				if !strings.Contains(logOutput, "\"template_key\":\""+testCase.expectedKey+"\"") {
+					t.Fatalf("expected template key %q in log output, got %s", testCase.expectedKey, logOutput)
+				}
+			})
+		}
+	})
 }
