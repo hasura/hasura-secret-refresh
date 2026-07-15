@@ -10,6 +10,7 @@ import (
 	awsSm "github.com/hasura/hasura-secret-refresh/provider/aws_secrets_manager"
 	awsSmOauth "github.com/hasura/hasura-secret-refresh/provider/aws_sm_oauth"
 	azureKv "github.com/hasura/hasura-secret-refresh/provider/azure_key_vault"
+	fileJson "github.com/hasura/hasura-secret-refresh/provider/file_json"
 	hashicorpVault "github.com/hasura/hasura-secret-refresh/provider/hashicorp_vault"
 	"github.com/hasura/hasura-secret-refresh/server"
 	"github.com/rs/zerolog"
@@ -38,6 +39,7 @@ const (
 	azure_key_vault_file = "file_azure_key_vault"
 	hashicorp_vault      = "proxy_hashicorp_vault"
 	hashicorp_vault_file = "file_hashicorp_vault"
+	file_json_provider   = "file_json"
 )
 
 func main() {
@@ -238,6 +240,14 @@ func parseConfig(rawConfig map[string]interface{}, logger zerolog.Logger) (confi
 		} else if providerType == hashicorp_vault_file {
 			var fProvider_ provider.FileProvider
 			fProvider_, err = hashicorpVault.CreateHashicorpVaultFile(providerData, sublogger)
+			if err != nil {
+				sublogger.Err(err).Msgf("Error creating provider")
+				return
+			}
+			fileProviders = append(fileProviders, fProvider_)
+		} else if providerType == file_json_provider {
+			var fProvider_ provider.FileProvider
+			fProvider_, err = fileJson.CreateFileJsonProvider(providerData, sublogger)
 			if err != nil {
 				sublogger.Err(err).Msgf("Error creating provider")
 				return
