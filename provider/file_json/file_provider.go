@@ -3,6 +3,7 @@ package file_json
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -44,6 +45,10 @@ func CreateFileJsonProvider(config map[string]interface{}, logger zerolog.Logger
 	if !ok {
 		logger.Error().Msg("file_json: 'path' must be a string")
 		return FileJsonProvider{}, fmt.Errorf("config not valid")
+	}
+	if err := validateDistinctPaths(inputPath, filePath); err != nil {
+		logger.Err(err).Msg("file_json: invalid path configuration")
+		return FileJsonProvider{}, err
 	}
 
 	refreshIntervalI, found := config["refresh"]
@@ -174,4 +179,46 @@ func (provider FileJsonProvider) writeFile(secretString string) error {
 		return err
 	}
 	return nil
+}
+
+func validateDistinctPaths(inputPath, filePath string) error {
+	resolvedInputPath, err := resolvePathForComparison(inputPath)
+	if err != nil {
+		return fmt.Errorf("config not valid: unable to resolve 'input_path': %w", err)
+	}
+
+	resolvedFilePath, err := resolvePathForComparison(filePath)
+	if err != nil {
+		return fmt.Errorf("config not valid: unable to resolve 'path': %w", err)
+	}
+
+	if resolvedInputPath == resolvedFilePath {
+		return fmt.Errorf("config not valid: 'input_path' and 'path' must refer to different files")
+	}
+
+	return nil
+}
+
+func resolvePathForComparison(path string) (string, error) {
+	cleanedPath := filepath.Clean(path)
+	resolvedPath, err := filepath.EvalSymlinks(cleanedPath)
+	if err == nil {
+		return resolvedPath, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	parentPath := filepath.Dir(cleanedPath)
+	resolvedParentPath, parentErr := filepath.EvalSymlinks(parentPath)
+	if parentErr == nil {
+		return filepath.Join(resolvedParentPath, filepath.Base(cleanedPath)), nil
+	}
+
+	if os.IsNotExist(parentErr) {
+		return cleanedPath, nil
+	}
+
+	return "", parentErr
 }
