@@ -1,4 +1,4 @@
-FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable@sha256:1e0126852075c9c60731c8ba49088448b91f63e2aed97ca9d1a9791622a05946 AS builder
+FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY . .
 # Build the binary with security flags
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o secrets-management-proxy
 
-FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/alpine:3.23-stable@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
+FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/alpine:3.23-stable
 
 # Install CA certificates and require an OpenSSL build containing the security
 # fixes shipped in Alpine's 3.5.8-r0 packages. Keep the lower bound so a newer
