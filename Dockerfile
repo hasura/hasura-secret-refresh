@@ -1,4 +1,4 @@
-FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable AS builder
+FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable@sha256:1e0126852075c9c60731c8ba49088448b91f63e2aed97ca9d1a9791622a05946 AS builder
 
 WORKDIR /app
 
@@ -12,17 +12,15 @@ COPY . .
 # Build the binary with security flags
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o secrets-management-proxy
 
-FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/alpine:3.23-stable
+FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/alpine:3.23-stable@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
-# TODO: Remove this targeted upgrade once the alpine:3.23-stable base snapshot
-# ships openssl libcrypto3/libssl3 >= 3.5.7-r0. The snapshot currently lags at
-# 3.5.6-r0, which is vulnerable to CVE-2026-45447 (HIGH, heap use-after-free in
-# PKCS7_verify) and trips the trivy HIGH/CRITICAL gate. Bump just the affected
-# libs until the base picks up the fix automatically.
-RUN apk --no-cache upgrade libcrypto3 libssl3
+# Install CA certificates and require an OpenSSL build containing the security
+# fixes shipped in Alpine's 3.5.8-r0 packages. Keep the lower bound so a newer
+# security revision remains installable as the repository advances.
+RUN apk --no-cache add \
+    ca-certificates \
+    'libcrypto3>=3.5.8-r0' \
+    'libssl3>=3.5.8-r0'
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \
