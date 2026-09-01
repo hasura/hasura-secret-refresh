@@ -27,5 +27,6 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          pull: true
           push: true
           tags: hasura/secrets-management-proxy:${{ github.ref_name }}

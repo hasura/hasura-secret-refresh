@@ -52,7 +52,7 @@ jobs:
         run: |
           echo "Building ${{ matrix.service.name }}"
           export TAG="${GITHUB_SHA::8}"
-          docker build -t "hasura-secret-refresher:${TAG}" -f ${{ matrix.service.dockerFilePath }} ${{ matrix.service.dockerContextPath }}
+          docker build --pull -t "hasura-secret-refresher:${TAG}" -f ${{ matrix.service.dockerFilePath }} ${{ matrix.service.dockerContextPath }}
           DOCKER_IMG="hasura-secret-refresher:${TAG}"
           echo "DOCKER_IMG = $DOCKER_IMG"
           echo "DOCKER_IMG=${DOCKER_IMG}" >> $GITHUB_ENV

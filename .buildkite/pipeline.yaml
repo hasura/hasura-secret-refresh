@@ -42,7 +42,7 @@ steps:
       DOCKER_IMAGE="gcr.io/hasura-ee/secrets-management-proxy:$$VERSION"
 
       echo "~~~ :docker: Building"
-      docker build -t "$$DOCKER_IMAGE" -f ./Dockerfile .
+      docker build --pull -t "$$DOCKER_IMAGE" -f ./Dockerfile .
 
       echo "~~~ :docker: Pushing"
       docker push "$$DOCKER_IMAGE"
