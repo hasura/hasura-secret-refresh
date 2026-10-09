@@ -1,5 +1,12 @@
 FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable AS builder
 
+# Honour the go.mod `toolchain` directive so the binary is compiled with the
+# pinned Go toolchain (go1.26.9) even though the builder base ships an older
+# 1.25.x compiler. go1.26.9 carries the stdlib fixes for CVE-2026-78667 and
+# CVE-2026-97031. GOTOOLCHAIN=auto is the Go default; set explicitly so the
+# fix does not silently regress if the base image ever pins GOTOOLCHAIN=local.
+ENV GOTOOLCHAIN=auto
+
 WORKDIR /app
 
 # Copy go mod files first for better caching
