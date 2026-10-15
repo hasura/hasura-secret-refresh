@@ -1,12 +1,9 @@
-FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.25-alpine-stable AS builder
+FROM us-docker.pkg.dev/hasura-container-images/external-images/docker.io/library/golang:1.26-alpine-stable AS builder
 
-# Compile with Go 1.26.9 even though this -stable builder base ships an older
-# 1.25.x compiler and pins GOTOOLCHAIN=local (under which a go.mod `toolchain`
-# line is silently ignored). Pin GOTOOLCHAIN to the exact fixed toolchain so
-# the builder fetches and uses go1.26.9, which carries the stdlib fixes for
-# CVE-2026-78667 and CVE-2026-97031. This also satisfies the go.mod `go 1.26.0`
-# requirement introduced by golang.org/x/net v0.60.0 (CVE-2026-78669).
-ENV GOTOOLCHAIN=go1.26.9
+# Build on the mirrored golang:1.26-alpine-stable builder, which provides Go
+# 1.26.x (>= 1.26.9 for the stdlib fixes to CVE-2026-78667 / CVE-2026-97031)
+# and pins GOTOOLCHAIN=local. A Go 1.26 builder is also required by the go.mod
+# `go 1.26.0` directive introduced via golang.org/x/net v0.60.0 (CVE-2026-78669).
 
 WORKDIR /app
 
